@@ -1,0 +1,12 @@
+# Xcode
+build/
+DerivedData/
+*.xcodeproj
+*.xcworkspace
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+xcuserdata/
+
+# OS-specific
+.DS_Store

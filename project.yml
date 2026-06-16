@@ -1,0 +1,34 @@
+name: PillDaddy
+options:
+  bundleIdPrefix: com.pilldaddy
+settings:
+  base:
+    DEVELOPMENT_TEAM: 6HQGHHRK87
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    STRING_CATALOG_GENERATE_SYMBOLS: YES
+    ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
+targets:
+  PillDaddy:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - PillDaddy
+    info:
+      path: PillDaddy/Info.plist
+      properties:
+        UILaunchScreen:
+          StoryboardName: ""
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        ITSAppUsesNonExemptEncryption: false
+        UIRequiresFullScreen: true
+    settings:
+      CODE_SIGN_ENTITLEMENTS: PillDaddy/PillDaddy.entitlements
+schemes:
+  PillDaddy:
+    build:
+      targets:
+        PillDaddy: all
+    run:
+      debugEnabled: false
