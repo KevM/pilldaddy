@@ -123,4 +123,57 @@ final class MedicationServiceTests: XCTestCase {
             try MedicationService.changeInstructions(item, newInstructions: "x", reason: "", in: context)
         ) { XCTAssertEqual($0 as? MedicationServiceError, .reasonRequired) }
     }
+
+    func testSwapInheritsScheduleDiscontinuesOldAndLinksSuccessor() throws {
+        let blue = Batch(name: "Blue")
+        let green = Batch(name: "Green")
+        context.insert(blue)
+        context.insert(green)
+        let old = MedicationService.addMedication(
+            name: "Metoprolol", strength: "30mg", form: "tablet",
+            isPRN: false, notes: "",
+            placements: [(batch: blue, quantity: 1.0), (batch: green, quantity: 0.5)],
+            reason: "", in: context)
+
+        let new = try MedicationService.swap(
+            old, newName: "Bisoprolol", newStrength: "5mg", newForm: "tablet",
+            inheritSchedule: true, reason: "Cardiologist switch", in: context)
+
+        XCTAssertFalse(old.isActive)
+        XCTAssertNotNil(old.discontinuedAt)
+        XCTAssertEqual(old.successor?.name, "Bisoprolol")
+        XCTAssertEqual(new.batchItems?.count, 2)
+        XCTAssertEqual((new.batchItems ?? []).map(\.quantity).sorted(), [0.5, 1.0])
+        XCTAssertTrue((old.changeEvents ?? []).contains { $0.eventType == MedChangeType.swapped.rawValue })
+        XCTAssertTrue((new.changeEvents ?? []).contains { $0.eventType == MedChangeType.added.rawValue })
+        // Old med keeps its memberships (discontinue preserves history).
+        XCTAssertEqual(old.batchItems?.count, 2)
+    }
+
+    func testSwapWithoutInheritLeavesNewUnscheduled() throws {
+        let blue = Batch(name: "Blue")
+        context.insert(blue)
+        let old = MedicationService.addMedication(
+            name: "Metoprolol", strength: "30mg", form: "tablet",
+            isPRN: false, notes: "",
+            placements: [(batch: blue, quantity: 1.0)], reason: "", in: context)
+
+        let new = try MedicationService.swap(
+            old, newName: "Bisoprolol", newStrength: "5mg", newForm: "tablet",
+            inheritSchedule: false, reason: "Switch", in: context)
+
+        XCTAssertEqual(new.batchItems ?? [], [])
+        XCTAssertEqual(old.batchItems?.count, 1)
+    }
+
+    func testSwapWithEmptyReasonThrows() throws {
+        let old = MedicationService.addMedication(
+            name: "Metoprolol", strength: "30mg", form: "tablet",
+            isPRN: false, notes: "", placements: [], reason: "", in: context)
+
+        XCTAssertThrowsError(
+            try MedicationService.swap(old, newName: "B", newStrength: "5mg",
+                newForm: "tablet", inheritSchedule: true, reason: " ", in: context)
+        ) { XCTAssertEqual($0 as? MedicationServiceError, .reasonRequired) }
+    }
 }

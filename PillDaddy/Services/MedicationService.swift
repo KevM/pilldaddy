@@ -75,6 +75,47 @@ enum MedicationService {
         try context.save()
     }
 
+    /// Atomically swaps one drug for a new one: create the replacement, optionally
+    /// inherit the old drug's batch memberships, link `successor`, discontinue the
+    /// old drug, and write a `swapped` event (old) + `added` event (new). Reason required.
+    @discardableResult
+    static func swap(
+        _ oldMed: Medication,
+        newName: String, newStrength: String, newForm: String,
+        inheritSchedule: Bool,
+        reason: String,
+        in context: ModelContext
+    ) throws -> Medication {
+        try requireReason(reason)
+
+        let newMed = Medication(name: newName, strength: newStrength, form: newForm)
+        context.insert(newMed)
+
+        if inheritSchedule {
+            for item in oldMed.batchItems ?? [] {
+                context.insert(BatchItem(
+                    quantity: item.quantity,
+                    instructionsOverride: item.instructionsOverride,
+                    medication: newMed, batch: item.batch))
+            }
+        }
+
+        let oldDescription = "\(oldMed.name) \(oldMed.strength)"
+        oldMed.successor = newMed
+        oldMed.isActive = false
+        oldMed.discontinuedAt = .now
+
+        context.insert(MedicationChangeEvent(
+            type: .swapped, reasoning: reason,
+            oldValue: oldDescription, newValue: "\(newName) \(newStrength)",
+            medication: oldMed))
+        context.insert(MedicationChangeEvent(
+            type: .added, reasoning: reason, medication: newMed))
+
+        try context.save()
+        return newMed
+    }
+
      // MARK: - Internal helpers
 
     /// Human-readable summary of a med's current dose, deterministic (sorted by batch name).
