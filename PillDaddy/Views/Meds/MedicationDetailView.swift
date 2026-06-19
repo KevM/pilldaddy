@@ -30,7 +30,7 @@ struct MedicationDetailView: View {
                 }
             }
 
-            if !(medication.batchItems ?? []).isEmpty {
+            if medication.isActive && !(medication.batchItems ?? []).isEmpty {
                 Section("Taken in") {
                     ForEach(medication.batchItems ?? []) { item in
                         HStack {

@@ -21,10 +21,13 @@ struct MedsView: View {
                 }
                 .pickerStyle(.segmented)
                 .padding()
-
-                switch mode {
-                case .regime: RegimeView()
-                case .allMeds: AllMedsView()
+                ZStack {
+                    RegimeView()
+                        .opacity(mode == .regime ? 1.0 : 0.0)
+                        .disabled(mode != .regime)
+                    AllMedsView()
+                        .opacity(mode == .allMeds ? 1.0 : 0.0)
+                        .disabled(mode != .allMeds)
                 }
             }
             .navigationTitle("Meds")

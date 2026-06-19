@@ -44,7 +44,7 @@ struct BatchEditor: View {
 
                 if let batch {
                     Section("Pills in this batch") {
-                        ForEach(batch.items ?? []) { item in
+                        ForEach(activeItems) { item in
                             HStack {
                                 Text(item.medication?.name ?? "—")
                                 Spacer()
@@ -53,8 +53,7 @@ struct BatchEditor: View {
                             }
                         }
                         .onDelete { offsets in
-                            let items = batch.items ?? []
-                            for index in offsets { context.delete(items[index]) }
+                            for index in offsets { context.delete(activeItems[index]) }
                             try? context.save()
                         }
                         Menu("Add medication") {
@@ -122,8 +121,13 @@ struct BatchEditor: View {
         }
     }
 
+    private var activeItems: [BatchItem] {
+        guard let batch else { return [] }
+        return (batch.items ?? []).filter { $0.medication?.isActive == true }
+    }
+
     private func addableMeds(to batch: Batch) -> [Medication] {
-        let present = Set((batch.items ?? []).compactMap { $0.medication?.persistentModelID })
+        let present = Set(activeItems.compactMap { $0.medication?.persistentModelID })
         return meds.filter { !present.contains($0.persistentModelID) }
     }
 
