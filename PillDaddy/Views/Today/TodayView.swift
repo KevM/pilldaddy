@@ -9,9 +9,6 @@ struct TodayView: View {
     private var batches: [Batch]
     @Query(filter: #Predicate<Medication> { $0.isActive && $0.isPRN }, sort: \Medication.name)
     private var prnMeds: [Medication]
-    /// Observed so inserts/deletes of logs re-render the screen.
-    @Query private var allLogs: [DoseLog]
-
     @State private var selectedDay = Date.now
     @State private var expandedID: PersistentIdentifier?
     @State private var prnExpanded = false
@@ -20,11 +17,9 @@ struct TodayView: View {
     @State private var adjustingBatch: DayQuery.BatchDay?
 
     private var batchDays: [DayQuery.BatchDay] {
-        _ = allLogs.count   // touch to keep the view dependent on log changes
         return DayQuery.batchDays(from: batches, on: selectedDay)
     }
     private var prnDoses: [DayQuery.PRNDose] {
-        _ = allLogs.count
         return DayQuery.prnDoses(from: prnMeds, on: selectedDay)
     }
     private var isToday: Bool { Calendar.current.isDate(selectedDay, inSameDayAs: .now) }
@@ -49,7 +44,7 @@ struct TodayView: View {
                     }
 
                     if !prnDoses.isEmpty {
-                        PRNCard(doses: prnDoses, isExpanded: prnExpanded,
+                        PRNCard(doses: prnDoses, day: selectedDay, isExpanded: prnExpanded,
                                 onToggle: { prnExpanded.toggle() })
                     }
                 }
@@ -60,6 +55,7 @@ struct TodayView: View {
             .sheet(item: $adjustingBatch) { IndividualAdjustSheet(batchDay: $0, day: selectedDay) }
             .onAppear(perform: autoExpand)
             .onChange(of: selectedDay) { _, _ in autoExpand() }
+            .onChange(of: batchDays.map { $0.state }) { _, _ in autoExpand() }
         }
     }
 

@@ -85,4 +85,19 @@ enum DayQuery {
             return PRNDose(med: med, logs: logs)
         }
     }
+
+    /// Combines a date's calendar components (year/month/day) with a time's clock components (hour/minute/second).
+    static func combine(date: Date, time: Date) -> Date {
+        let cal = Calendar.current
+        let dateComps = cal.dateComponents([.year, .month, .day], from: date)
+        let timeComps = cal.dateComponents([.hour, .minute, .second], from: time)
+        var combined = DateComponents()
+        combined.year = dateComps.year
+        combined.month = dateComps.month
+        combined.day = dateComps.day
+        combined.hour = timeComps.hour
+        combined.minute = timeComps.minute
+        combined.second = timeComps.second
+        return cal.date(from: combined) ?? date
+    }
 }

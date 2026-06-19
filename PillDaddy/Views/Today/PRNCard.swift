@@ -4,11 +4,16 @@ import SwiftData
 /// Regime-style "as-needed" card. The per-drug log UI is hidden until expanded.
 struct PRNCard: View {
     let doses: [DayQuery.PRNDose]
+    let day: Date
     let isExpanded: Bool
     let onToggle: () -> Void
 
     @Environment(\.modelContext) private var context
     @State private var loggingMed: Medication?
+
+    private var loggedCount: Int {
+        doses.reduce(0) { $0 + $1.logs.count }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -16,7 +21,7 @@ struct PRNCard: View {
                 HStack {
                     Text("As-needed").font(.headline)
                     Spacer()
-                    Text("\(doses.count)").foregroundStyle(.secondary)
+                    Text("\(loggedCount)").foregroundStyle(.secondary)
                     Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                         .foregroundStyle(.secondary)
                 }
@@ -52,7 +57,7 @@ struct PRNCard: View {
         }
         .padding()
         .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 16))
-        .sheet(item: $loggingMed) { PRNLogSheet(medication: $0) }
+        .sheet(item: $loggingMed) { PRNLogSheet(medication: $0, day: day) }
     }
 }
 
@@ -62,6 +67,7 @@ struct PRNCard: View {
     let meds = try! container.mainContext.fetch(
         FetchDescriptor<Medication>(predicate: #Predicate { $0.isActive && $0.isPRN }))
     return PRNCard(doses: DayQuery.prnDoses(from: meds, on: .now),
+                   day: .now,
                    isExpanded: true, onToggle: {})
         .modelContainer(container)
         .padding()

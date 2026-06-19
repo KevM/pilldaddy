@@ -4,6 +4,7 @@ import SwiftData
 /// Records a single ad-hoc PRN dose: time (default now), quantity, optional note.
 struct PRNLogSheet: View {
     let medication: Medication
+    let day: Date
 
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
@@ -16,7 +17,7 @@ struct PRNLogSheet: View {
         NavigationStack {
             Form {
                 Section("Dose") {
-                    DatePicker("Time", selection: $takenAt)
+                    DatePicker("Time", selection: $takenAt, displayedComponents: [.hourAndMinute])
                     Stepper("Quantity: \(DoseFormat.qty(quantity))",
                             value: $quantity, in: 0.5...20, step: 0.5)
                 }
@@ -38,6 +39,9 @@ struct PRNLogSheet: View {
                     }
                 }
             }
+            .onAppear {
+                takenAt = DayQuery.combine(date: day, time: Date.now)
+            }
         }
     }
 }
@@ -45,7 +49,7 @@ struct PRNLogSheet: View {
 #if DEBUG
 #Preview {
     let container = PreviewSupport.seededContainer()
-    return PRNLogSheet(medication: PreviewSupport.firstMedication(container))
+    return PRNLogSheet(medication: PreviewSupport.firstMedication(container), day: .now)
         .modelContainer(container)
 }
 #endif

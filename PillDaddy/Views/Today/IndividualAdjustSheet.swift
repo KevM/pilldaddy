@@ -17,6 +17,7 @@ struct IndividualAdjustSheet: View {
 
     @State private var choices: [PersistentIdentifier: Choice] = [:]
     @State private var note = ""
+    @State private var takenAt = Date.now
 
     private var anySkip: Bool { choices.values.contains(.skip) }
     private var saveDisabled: Bool {
@@ -26,14 +27,19 @@ struct IndividualAdjustSheet: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section("Time") {
+                    DatePicker("Taken at", selection: $takenAt, displayedComponents: [.hourAndMinute])
+                }
+
                 Section {
                     ForEach(batchDay.meds) { dose in
                         VStack(alignment: .leading, spacing: 6) {
                             Text(dose.item.medication?.name ?? "—")
-                            Picker("", selection: binding(for: dose)) {
+                            Picker("Dose choice for \(dose.item.medication?.name ?? "")", selection: binding(for: dose)) {
                                 ForEach(Choice.allCases) { Text($0.rawValue).tag($0) }
                             }
                             .pickerStyle(.segmented)
+                            .labelsHidden()
                         }
                         .padding(.vertical, 2)
                     }
@@ -52,7 +58,10 @@ struct IndividualAdjustSheet: View {
                     Button("Save") { save() }.disabled(saveDisabled)
                 }
             }
-            .onAppear(perform: seedChoices)
+            .onAppear {
+                seedChoices()
+                takenAt = DayQuery.combine(date: day, time: Date.now)
+            }
         }
     }
 
@@ -74,15 +83,19 @@ struct IndividualAdjustSheet: View {
 
     private func save() {
         for dose in batchDay.meds {
-            switch choices[dose.id] ?? .clear {
-            case .taken:
-                try? DoseLogService.logMed(dose.item, on: day, status: .taken,
-                                           takenAt: .now, note: "", in: context)
-            case .skip:
-                try? DoseLogService.logMed(dose.item, on: day, status: .skipped,
-                                           takenAt: nil, note: note, in: context)
-            case .clear:
-                DoseLogService.revert(dose.item, on: day, in: context)
+            do {
+                switch choices[dose.id] ?? .clear {
+                case .taken:
+                    try DoseLogService.logMed(dose.item, on: day, status: .taken,
+                                               takenAt: takenAt, note: "", in: context)
+                case .skip:
+                    try DoseLogService.logMed(dose.item, on: day, status: .skipped,
+                                               takenAt: nil, note: note, in: context)
+                case .clear:
+                    DoseLogService.revert(dose.item, on: day, in: context)
+                }
+            } catch {
+                print("Error saving log for dose \(dose.item.medication?.name ?? ""): \(error)")
             }
         }
         dismiss()

@@ -26,7 +26,7 @@ struct BatchTakenConfirmSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Time") { DatePicker("Taken at", selection: $takenAt) }
+                Section("Time") { DatePicker("Taken at", selection: $takenAt, displayedComponents: [.hourAndMinute]) }
 
                 if !unlogged.isEmpty {
                     Section("Will be marked taken") {
@@ -71,6 +71,9 @@ struct BatchTakenConfirmSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Confirm") { confirm() }
                 }
+            }
+            .onAppear {
+                takenAt = DayQuery.combine(date: day, time: Date.now)
             }
         }
     }

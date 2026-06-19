@@ -105,4 +105,21 @@ final class DayQueryTests: XCTestCase {
         XCTAssertEqual(prn.map { $0.med.name }, ["Tylenol"])
         XCTAssertEqual(prn.first?.logs.count, 1)
     }
+
+    func testCombineCombinesDateAndTime() throws {
+        let cal = Calendar.current
+        let dateComps = DateComponents(year: 2026, month: 6, day: 19)
+        let date = cal.date(from: dateComps)!
+        let timeComps = DateComponents(hour: 18, minute: 25, second: 30)
+        let time = cal.date(from: timeComps)!
+
+        let combined = DayQuery.combine(date: date, time: time)
+        let comps = cal.dateComponents([.year, .month, .day, .hour, .minute, .second], from: combined)
+        XCTAssertEqual(comps.year, 2026)
+        XCTAssertEqual(comps.month, 6)
+        XCTAssertEqual(comps.day, 19)
+        XCTAssertEqual(comps.hour, 18)
+        XCTAssertEqual(comps.minute, 25)
+        XCTAssertEqual(comps.second, 30)
+    }
 }
