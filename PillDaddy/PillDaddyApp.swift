@@ -16,6 +16,13 @@ struct PillDaddyApp: App {
         } catch {
             fatalError("Failed to initialize ModelContainer: \(error)")
         }
+
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-seedTestData") {
+            SeedData.seedIfEmpty(container.mainContext)
+            try? container.mainContext.save()
+        }
+        #endif
     }
 
     var body: some Scene {
