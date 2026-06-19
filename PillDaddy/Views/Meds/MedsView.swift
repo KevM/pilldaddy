@@ -25,9 +25,13 @@ struct MedsView: View {
                     RegimeView()
                         .opacity(mode == .regime ? 1.0 : 0.0)
                         .disabled(mode != .regime)
+                        .allowsHitTesting(mode == .regime)
+                        .accessibilityHidden(mode != .regime)
                     AllMedsView()
                         .opacity(mode == .allMeds ? 1.0 : 0.0)
                         .disabled(mode != .allMeds)
+                        .allowsHitTesting(mode == .allMeds)
+                        .accessibilityHidden(mode != .allMeds)
                 }
             }
             .navigationTitle("Meds")
