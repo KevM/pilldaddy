@@ -27,9 +27,11 @@ enum SeedData {
         let vitaminD = Medication(name: "Vitamin D", strength: "1000 IU", form: "capsule")
         context.insert(metoprolol)
         context.insert(vitaminD)
-        context.insert(BatchItem(quantity: 1.0, medication: metoprolol, batch: blue))
+        let metoprololBlue = BatchItem(quantity: 1.0, medication: metoprolol, batch: blue)
+        let vitaminDBlue = BatchItem(quantity: 1.0, medication: vitaminD, batch: blue)
+        context.insert(metoprololBlue)
         context.insert(BatchItem(quantity: 0.5, medication: metoprolol, batch: green))
-        context.insert(BatchItem(quantity: 1.0, medication: vitaminD, batch: blue))
+        context.insert(vitaminDBlue)
 
         // PRN med
         let acetaminophen = Medication(name: "Acetaminophen", strength: "500mg", isPRN: true)
@@ -41,5 +43,24 @@ enum SeedData {
         context.insert(MedicationChangeEvent(
             type: .doseChanged, reasoning: "Reduced evening dose after dizziness",
             oldValue: "1 tablet", newValue: "½ tablet", medication: metoprolol))
+
+        // Today's logging: Blue batch partially logged (Metoprolol taken, Vitamin D
+        // skipped), one PRN dose taken. Green batch left pending.
+        let blueSlot = DayQuery.slotDate(for: blue, on: .now)
+        context.insert(DoseLog(
+            scheduledDate: blueSlot, takenAt: time(9, 5), status: .taken, quantity: 1.0,
+            snapshotMedName: metoprolol.name, snapshotStrength: metoprolol.strength,
+            snapshotBatchColorHex: blue.colorHex,
+            medication: metoprolol, batchItem: metoprololBlue))
+        context.insert(DoseLog(
+            scheduledDate: blueSlot, status: .skipped, quantity: 1.0, notes: "Held — low appetite",
+            snapshotMedName: vitaminD.name, snapshotStrength: vitaminD.strength,
+            snapshotBatchColorHex: blue.colorHex,
+            medication: vitaminD, batchItem: vitaminDBlue))
+        context.insert(DoseLog(
+            scheduledDate: time(14, 30), takenAt: time(14, 30), status: .taken, quantity: 1.0,
+            snapshotMedName: acetaminophen.name, snapshotStrength: acetaminophen.strength,
+            medication: acetaminophen, batchItem: nil))
     }
 }
+
