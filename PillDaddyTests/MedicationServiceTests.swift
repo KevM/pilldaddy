@@ -89,4 +89,38 @@ final class MedicationServiceTests: XCTestCase {
             XCTAssertEqual(error as? MedicationServiceError, .reasonRequired)
         }
     }
+
+    func testChangeInstructionsUpdatesItemAndWritesEvent() throws {
+        let blue = Batch(name: "Blue")
+        context.insert(blue)
+        let med = MedicationService.addMedication(
+            name: "Metoprolol", strength: "30mg", form: "tablet",
+            isPRN: false, notes: "",
+            placements: [(batch: blue, quantity: 1.0)],
+            reason: "", in: context)
+        let item = try XCTUnwrap(med.batchItems?.first)
+
+        try MedicationService.changeInstructions(
+            item, newInstructions: "Take on empty stomach",
+            reason: "Per pharmacist", in: context)
+
+        XCTAssertEqual(item.instructionsOverride, "Take on empty stomach")
+        let events = (med.changeEvents ?? []).filter { $0.eventType == MedChangeType.instructionsChanged.rawValue }
+        XCTAssertEqual(events.count, 1)
+        XCTAssertEqual(events.first?.newValue, "Take on empty stomach")
+    }
+
+    func testChangeInstructionsWithEmptyReasonThrows() throws {
+        let blue = Batch(name: "Blue")
+        context.insert(blue)
+        let med = MedicationService.addMedication(
+            name: "Metoprolol", strength: "30mg", form: "tablet",
+            isPRN: false, notes: "",
+            placements: [(batch: blue, quantity: 1.0)], reason: "", in: context)
+        let item = try XCTUnwrap(med.batchItems?.first)
+
+        XCTAssertThrowsError(
+            try MedicationService.changeInstructions(item, newInstructions: "x", reason: "", in: context)
+        ) { XCTAssertEqual($0 as? MedicationServiceError, .reasonRequired) }
+    }
 }

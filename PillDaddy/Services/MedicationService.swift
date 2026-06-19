@@ -56,9 +56,26 @@ enum MedicationService {
             type: .doseChanged, reasoning: reason,
             oldValue: oldSummary, newValue: newSummary, medication: med))
         try context.save()
+     }
+
+    /// Updates a single membership's instructions and records an
+    /// `instructionsChanged` event. Reason required.
+    static func changeInstructions(
+        _ item: BatchItem,
+        newInstructions: String,
+        reason: String,
+        in context: ModelContext
+    ) throws {
+        try requireReason(reason)
+        let old = item.instructionsOverride
+        item.instructionsOverride = newInstructions
+        context.insert(MedicationChangeEvent(
+            type: .instructionsChanged, reasoning: reason,
+            oldValue: old, newValue: newInstructions, medication: item.medication))
+        try context.save()
     }
 
-    // MARK: - Internal helpers
+     // MARK: - Internal helpers
 
     /// Human-readable summary of a med's current dose, deterministic (sorted by batch name).
     static func doseSummary(_ med: Medication) -> String {
