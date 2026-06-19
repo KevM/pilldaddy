@@ -7,14 +7,34 @@
 
 ## Goal
 
-Turn the stubbed **Today** tab into a working daily dose-logging checklist that writes
-`DoseLog` rows. A caregiver opens the app each day and records what was taken, what was
-deliberately skipped, and at what time — batch-first, with per-med precision when needed, plus
-ad-hoc logging for as-needed (PRN) meds. This is the daily-use loop the rest of the app
-(reminders, journal, reporting) builds on.
+Turn the stubbed **Today** tab into a working dose-logging checklist that writes `DoseLog` rows.
+A caregiver records what was taken, what was deliberately skipped, and at what time — batch-first,
+with per-med precision when needed, plus ad-hoc logging for as-needed (PRN) meds. This is the core
+interaction the rest of the app (reminders, journal, reporting) builds on.
+
+A caregiver does not open this app once a day — they open it **every time a dose is given** (and,
+later, every time a metric is taken), often many times a day, frequently while also handling the
+person they care for. The screen must therefore be **fast to get into, fast to act on, and fast to
+get out of**: launch lands on the right thing to do *now*, the common action is one tap, and the app
+never demands attention it doesn't need. See *Design values* below.
 
 No model changes — Session 0's `DoseLog` already fits. Every action this session writes the
 `DoseLog` rows that Session 5 (reporting) will read.
+
+### Design values
+
+These shape every UI decision in this session and are how the implementation should resolve
+ambiguity:
+
+- **Glanceable.** On launch the Today screen shows, without scrolling or thinking, what is due now
+  and what is done — hence the closest-to-now batch auto-expands and everything else stays collapsed.
+- **One-tap common path.** The overwhelming case is "they took the whole batch": *Mark all taken*
+  with a sensible default time, no required fields. Friction (notes, per-med adjustment, time
+  editing) is opt-in and reserved for the exceptions.
+- **Quick in, quick out.** Minimize taps and sheets between opening the app and recording a dose.
+  Confirmations exist only where a mistake would be costly or silent (skips, overwrites).
+- **Stays out of the way.** No nagging, no blocking, no ceremony for routine logging; the tool
+  should feel lightweight to a stressed caregiver doing this for the Nth time today.
 
 ## Scope (locked)
 
@@ -178,5 +198,6 @@ taken / skipped / pending states for dogfooding and previews.
 
 ## Dogfood state
 
-The daily-use loop: open PillDaddy each day and log the patient's doses, building the dose history
-the journal and reporting sessions depend on.
+The core loop: reach for PillDaddy each time a dose is given — many times a day — log it in a tap or
+two, and put the phone down. This builds the dose history the journal and reporting sessions depend
+on.
