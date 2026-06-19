@@ -36,6 +36,28 @@ enum MedicationService {
         return med
     }
 
+    /// Changes strength and/or per-batch quantities on the same medication and
+    /// records a `doseChanged` event with an old→new summary. Reason required.
+    static func changeDose(
+        _ med: Medication,
+        newStrength: String,
+        newQuantities: [(item: BatchItem, quantity: Double)],
+        reason: String,
+        in context: ModelContext
+    ) throws {
+        try requireReason(reason)
+        let oldSummary = doseSummary(med)
+        med.strength = newStrength
+        for change in newQuantities {
+            change.item.quantity = change.quantity
+        }
+        let newSummary = doseSummary(med)
+        context.insert(MedicationChangeEvent(
+            type: .doseChanged, reasoning: reason,
+            oldValue: oldSummary, newValue: newSummary, medication: med))
+        try context.save()
+    }
+
     // MARK: - Internal helpers
 
     /// Human-readable summary of a med's current dose, deterministic (sorted by batch name).
