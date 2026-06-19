@@ -116,6 +116,26 @@ enum MedicationService {
         return newMed
     }
 
+    /// Marks a medication discontinued (keeps its memberships and history) and
+    /// writes a `discontinued` event. Reason required.
+    static func discontinue(_ med: Medication, reason: String, in context: ModelContext) throws {
+        try requireReason(reason)
+        med.isActive = false
+        med.discontinuedAt = .now
+        context.insert(MedicationChangeEvent(type: .discontinued, reasoning: reason, medication: med))
+        try context.save()
+    }
+
+    /// Restores a discontinued medication to the active regime (its memberships
+    /// reappear automatically) and writes a `reactivated` event. Reason required.
+    static func reactivate(_ med: Medication, reason: String, in context: ModelContext) throws {
+        try requireReason(reason)
+        med.isActive = true
+        med.discontinuedAt = nil
+        context.insert(MedicationChangeEvent(type: .reactivated, reasoning: reason, medication: med))
+        try context.save()
+    }
+
      // MARK: - Internal helpers
 
     /// Human-readable summary of a med's current dose, deterministic (sorted by batch name).

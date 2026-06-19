@@ -176,4 +176,43 @@ final class MedicationServiceTests: XCTestCase {
                 newForm: "tablet", inheritSchedule: true, reason: " ", in: context)
         ) { XCTAssertEqual($0 as? MedicationServiceError, .reasonRequired) }
     }
+
+    func testDiscontinueKeepsMembershipsAndMarksInactive() throws {
+        let blue = Batch(name: "Blue")
+        context.insert(blue)
+        let med = MedicationService.addMedication(
+            name: "Metoprolol", strength: "30mg", form: "tablet",
+            isPRN: false, notes: "",
+            placements: [(batch: blue, quantity: 1.0)], reason: "", in: context)
+
+        try MedicationService.discontinue(med, reason: "No longer needed", in: context)
+
+        XCTAssertFalse(med.isActive)
+        XCTAssertNotNil(med.discontinuedAt)
+        XCTAssertEqual(med.batchItems?.count, 1) // memberships preserved
+        XCTAssertTrue((med.changeEvents ?? []).contains { $0.eventType == MedChangeType.discontinued.rawValue })
+    }
+
+    func testReactivateRestoresActiveState() throws {
+        let med = MedicationService.addMedication(
+            name: "Metoprolol", strength: "30mg", form: "tablet",
+            isPRN: false, notes: "", placements: [], reason: "", in: context)
+        try MedicationService.discontinue(med, reason: "stop", in: context)
+
+        try MedicationService.reactivate(med, reason: "Restarting", in: context)
+
+        XCTAssertTrue(med.isActive)
+        XCTAssertNil(med.discontinuedAt)
+        XCTAssertTrue((med.changeEvents ?? []).contains { $0.eventType == MedChangeType.reactivated.rawValue })
+    }
+
+    func testDiscontinueWithEmptyReasonThrows() throws {
+        let med = MedicationService.addMedication(
+            name: "Metoprolol", strength: "30mg", form: "tablet",
+            isPRN: false, notes: "", placements: [], reason: "", in: context)
+
+        XCTAssertThrowsError(
+            try MedicationService.discontinue(med, reason: "", in: context)
+        ) { XCTAssertEqual($0 as? MedicationServiceError, .reasonRequired) }
+    }
 }
