@@ -23,6 +23,8 @@ targets:
           - UIInterfaceOrientationPortrait
         ITSAppUsesNonExemptEncryption: false
         UIRequiresFullScreen: true
+        UIBackgroundModes:
+          - remote-notification
     settings:
       base:
         CODE_SIGN_ENTITLEMENTS: PillDaddy/PillDaddy.entitlements
