@@ -28,6 +28,7 @@ medications are often stressed and cannot reliably remember why each change was 
 | Reminders | **Active reminders + Live Activities** (PillBuddy-style "pester") | Notifications + ActivityKit subsystem (Session 3). |
 | Drug lookup | **Free-text in v1**, structured for later | No external drug API now; model leaves room for it. |
 | Distribution | **TestFlight-focused**, decide later | Moderate ceremony; defer App Store polish to Session 7. |
+| Deployment target | **iOS 26.0** | Latest SwiftData / SwiftUI / ActivityKit with no `@available` guards. Dogfood devices must be on iOS 26+. |
 | Spike code | **Throwaway** | Rebuild clean; salvage XcodeGen config, `Color+Extension`, `Theme`, and model *shapes* as reference only. |
 
 ## Approach: vertical spine first
@@ -61,17 +62,24 @@ Dependencies are listed per session. Each is its own brainstorm → spec → pla
 ### Session 0 — Foundation & data model
 **Depends on:** —
 Clean project setup (XcodeGen, SwiftData + CloudKit container, entitlements). Core SwiftData
-models: `Medication`, `Batch` (color-coded, time-based), `DoseLog`, `MedicationChangeEvent`
-(the journal — timestamped lifecycle events: added / dose-changed / swapped / discontinued, each
-carrying an optional free-text *reasoning* note), `MedicationLink` (continuity across swaps),
-`HealthMetric`. App navigation skeleton. Dev seed data.
+models: `Medication`, `Batch` (color-coded, time-based, daily/weekday recurrence), `BatchItem`
+(join carrying per-batch quantity, e.g. 1 tablet AM / ½ tablet PM), `DoseLog` (per-medication,
+with frozen snapshot fields), `MedicationChangeEvent` (the reasoning journal — added /
+doseChanged / instructionsChanged / swapped / discontinued / reactivated / note), and a
+`successor` self-link on `Medication` for swap continuity. App navigation skeleton (stubbed tabs).
+Dev seed data (gated behind DEBUG). `HealthMetric` deferred to Session 6.
+See [`2026-06-19-session-0-foundation-design.md`](2026-06-19-session-0-foundation-design.md).
 **Dogfood state:** Launches; skeleton only — proves the schema.
 
 ### Session 1 — Medication & regime
 **Depends on:** 0
 Medication CRUD with **"why?" reasoning capture on add/edit** (writes a `MedicationChangeEvent`).
-Color-coded, time-based batches; assign meds to batches. Color manager (configure which pills are
-in each batch). The regime view.
+Color-coded, time-based batches; assign meds to batches with per-batch quantity. Color manager
+(configure which pills are in each batch). The regime view. **Guided, atomic medication-change
+workflow:** a structured flow for swaps that discontinues the old med, creates the replacement,
+links them via `successor`, and *requires* a reasoning note — all written in one save, so the
+caregiver can never leave the old med active or the replacement unlinked. The same note is
+mandatory on dose/instruction changes.
 **Dogfood state:** First real use — load the patient's actual meds/regime and use as a reference.
 
 ### Session 2 — Dose logging
@@ -88,9 +96,9 @@ that actively "pesters" until the batch is logged (modeled after PillBuddy).
 
 ### Session 4 — Medication change journal & continuity
 **Depends on:** 1, 2
-Per-medication **reasoning timeline** (the *why* behind every change over time). Swap-linking
-(e.g. beta blocker A → beta blocker B) via `MedicationLink` so reasoning and dose history stay
-continuous across substitutions.
+Per-medication **reasoning timeline** (the *why* behind every change over time). Swap continuity
+(e.g. beta blocker A → beta blocker B) by walking the `successor` chain, so reasoning and dose
+history stay continuous across substitutions.
 **Dogfood state:** Value compounds as meds change over weeks.
 
 ### Session 5 — Reporting
