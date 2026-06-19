@@ -42,4 +42,19 @@ final class SeedDataTests: XCTestCase {
 
         XCTAssertEqual(countAfterFirst, countAfterSecond)
     }
+
+    func testSeedIncludesTodaysDoseLogs() throws {
+        let container = try ModelTestSupport.makeContainer()
+        let context = container.mainContext
+        SeedData.seedIfEmpty(context)
+        try context.save()
+
+        let cal = Calendar.current
+        let logs = try context.fetch(FetchDescriptor<DoseLog>())
+        let todays = logs.filter { cal.isDate($0.scheduledDate, inSameDayAs: .now) }
+        XCTAssertGreaterThanOrEqual(todays.count, 2)
+        XCTAssertTrue(todays.contains { $0.status == DoseStatus.taken.rawValue })
+        XCTAssertTrue(todays.contains { $0.status == DoseStatus.skipped.rawValue })
+    }
 }
+

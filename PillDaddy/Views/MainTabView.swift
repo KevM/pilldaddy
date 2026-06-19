@@ -3,7 +3,7 @@ import SwiftUI
 struct MainTabView: View {
     var body: some View {
         TabView {
-            PlaceholderTab(title: "Today", systemImage: "checklist")
+            TodayView()
                 .tabItem { Label("Today", systemImage: "checklist") }
             MedsView()
                 .tabItem { Label("Meds", systemImage: "pills") }
