@@ -5,7 +5,7 @@ struct MainTabView: View {
         TabView {
             PlaceholderTab(title: "Today", systemImage: "checklist")
                 .tabItem { Label("Today", systemImage: "checklist") }
-            PlaceholderTab(title: "Meds", systemImage: "pills")
+            MedsView()
                 .tabItem { Label("Meds", systemImage: "pills") }
             PlaceholderTab(title: "Reports", systemImage: "chart.bar")
                 .tabItem { Label("Reports", systemImage: "chart.bar") }
