@@ -1,39 +1,35 @@
 import SwiftUI
 
 struct MainTabView: View {
-    @State private var selectedTab = 0
-    
-    init() {
-        // Translucent background configuration for the tab bar
-        let appearance = UITabBarAppearance()
-        appearance.configureWithDefaultBackground()
-        appearance.backgroundColor = UIColor(Color(hex: "#0F172A").opacity(0.92))
-        appearance.shadowColor = UIColor.white.withAlphaComponent(0.06)
-        
-        UITabBar.appearance().standardAppearance = appearance
-        UITabBar.appearance().scrollEdgeAppearance = appearance
-    }
-    
     var body: some View {
-        TabView(selection: $selectedTab) {
-            RegimeView()
-                .tabItem {
-                    Label("Regime", systemImage: "clock.badge.checkmark.fill")
-                }
-                .tag(0)
-            
-            PillManagerView()
-                .tabItem {
-                    Label("Cabinet", systemImage: "pills.fill")
-                }
-                .tag(1)
-            
-            ReportsView()
-                .tabItem {
-                    Label("Analytics", systemImage: "chart.bar.fill")
-                }
-                .tag(2)
+        TabView {
+            PlaceholderTab(title: "Today", systemImage: "checklist")
+                .tabItem { Label("Today", systemImage: "checklist") }
+            PlaceholderTab(title: "Meds", systemImage: "pills")
+                .tabItem { Label("Meds", systemImage: "pills") }
+            PlaceholderTab(title: "Reports", systemImage: "chart.bar")
+                .tabItem { Label("Reports", systemImage: "chart.bar") }
+            PlaceholderTab(title: "Health", systemImage: "heart")
+                .tabItem { Label("Health", systemImage: "heart") }
+            PlaceholderTab(title: "Settings", systemImage: "gear")
+                .tabItem { Label("Settings", systemImage: "gear") }
         }
-        .tint(Color(hex: "#38BDF8")) // Cyan active tab tint
     }
+}
+
+private struct PlaceholderTab: View {
+    let title: String
+    let systemImage: String
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: systemImage).font(.largeTitle)
+            Text(title).font(.title2)
+            Text("Coming soon").foregroundStyle(.secondary)
+        }
+    }
+}
+
+#Preview {
+    MainTabView()
 }
