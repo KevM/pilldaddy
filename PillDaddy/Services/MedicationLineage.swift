@@ -67,4 +67,19 @@ enum MedicationLineage {
         }
         return result.sorted { $0.event.timestamp > $1.event.timestamp }
     }
+
+    /// Human-readable title for a lineage event. Swaps read "Swapped to {next}".
+    static func title(for item: LineageEvent) -> String {
+        switch MedChangeType(rawValue: item.event.eventType) {
+        case .added: return "Added"
+        case .doseChanged: return "Dose changed"
+        case .instructionsChanged: return "Instructions changed"
+        case .swapped:
+            if let name = item.successorName { return "Swapped to \(name)" }
+            return "Swapped"
+        case .discontinued: return "Discontinued"
+        case .reactivated: return "Reactivated"
+        case .note, .none: return "Note"
+        }
+    }
 }
