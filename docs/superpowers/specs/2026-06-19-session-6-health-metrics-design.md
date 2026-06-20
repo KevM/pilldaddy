@@ -192,6 +192,20 @@ Seeded rows are local-only (`healthKitSynced = false`); seeding does not touch A
 - **Capture → persist:** saving inserts the expected `HealthMetric` row(s); Vitals writes only
   the present fields; HK denial still persists locally (fake writer that throws).
 
+## App Store / TestFlight considerations
+
+HealthKit works normally on TestFlight (distribution builds), and external testers go through
+Beta App Review — so review rules can bite at the TestFlight stage.
+
+- **Hard architectural constraint (here, now):** App Review forbids storing HealthKit-*obtained*
+  data in iCloud. Our design is exempt **only because it is write-only** — the metrics in
+  CloudKit are the user's own in-app entries, never data read back from HealthKit. **We must
+  never add read/Share access** (no `NSHealthShareUsageDescription`), or the exemption breaks.
+- **Deferred to Session 7 (launch readiness):** privacy-policy URL (provided by the public
+  website), App Privacy "nutrition label" questionnaire, medical disclaimer copy, and the
+  concrete usage-string wording. These are submission-gating, not code-gating. See the roadmap's
+  Session 7 entry.
+
 ## Out of scope (this session)
 
 Sleep Quality; editing readings; two-way Health sync; HK resync/retry queue; charts/reporting
