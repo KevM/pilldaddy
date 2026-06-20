@@ -1,9 +1,10 @@
 import SwiftData
-import XCTest
+import Testing
 @testable import PillDaddy
 
 @MainActor
-final class MedicationModelTests: XCTestCase {
+struct MedicationModelTests {
+    @Test
     func testInsertedMedicationHasExpectedDefaults() throws {
         let container = try ModelTestSupport.makeContainer()
         let context = container.mainContext
@@ -13,14 +14,15 @@ final class MedicationModelTests: XCTestCase {
         try context.save()
 
         let fetched = try context.fetch(FetchDescriptor<Medication>())
-        XCTAssertEqual(fetched.count, 1)
-        let only = try XCTUnwrap(fetched.first)
-        XCTAssertEqual(only.name, "Metoprolol")
-        XCTAssertEqual(only.strength, "30mg")
-        XCTAssertEqual(only.form, "tablet")
-        XCTAssertTrue(only.isActive)
-        XCTAssertFalse(only.isPRN)
-        XCTAssertEqual(only.batchItems ?? [], [])
-        XCTAssertNil(only.successor)
+        #expect(fetched.count == 1)
+        let only = try #require(fetched.first)
+        #expect(only.name == "Metoprolol")
+        #expect(only.strength == "30mg")
+        #expect(only.form == "tablet")
+        #expect(only.isActive)
+        #expect(!only.isPRN)
+        #expect(only.batchItems ?? [] == [])
+        #expect(only.successor == nil)
     }
 }
+

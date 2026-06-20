@@ -1,25 +1,24 @@
+import Foundation
 import SwiftData
-import XCTest
+import Testing
 @testable import PillDaddy
 
 @MainActor
-final class DoseLogServiceTests: XCTestCase {
+struct DoseLogServiceTests {
 
-    private var container: ModelContainer!
-    private var context: ModelContext!
-    private var blue: Batch!
+    private let container: ModelContainer
+    private let context: ModelContext
+    private let blue: Batch
 
-    override func setUp() async throws {
-        try await super.setUp()
-        container = try ModelTestSupport.makeContainer()
-        context = container.mainContext
-        blue = Batch(name: "Blue", colorHex: "#3B82F6", timeOfDay: .now, sortOrder: 0)
+    init() throws {
+        let container = try ModelTestSupport.makeContainer()
+        let context = container.mainContext
+        let blue = Batch(name: "Blue", colorHex: "#3B82F6", timeOfDay: .now, sortOrder: 0)
         context.insert(blue)
-    }
 
-    override func tearDown() async throws {
-        blue = nil; context = nil; container = nil
-        try await super.tearDown()
+        self.container = container
+        self.context = context
+        self.blue = blue
     }
 
     private func addMed(_ name: String, qty: Double) -> BatchItem {
@@ -31,6 +30,7 @@ final class DoseLogServiceTests: XCTestCase {
 
     private func logs() throws -> [DoseLog] { try context.fetch(FetchDescriptor<DoseLog>()) }
 
+    @Test
     func testLogBatchTakenWritesOneRowPerItemWithSnapshotsAndQuantity() throws {
         let a = addMed("A", qty: 0.5)
         let b = addMed("B", qty: 1.0)
@@ -38,22 +38,24 @@ final class DoseLogServiceTests: XCTestCase {
         DoseLogService.logBatchTaken(blue, on: .now, items: [a, b], takenAt: at, note: "", in: context)
 
         let all = try logs()
-        XCTAssertEqual(all.count, 2)
-        let aLog = try XCTUnwrap(all.first { $0.snapshotMedName == "A" })
-        XCTAssertEqual(aLog.status, DoseStatus.taken.rawValue)
-        XCTAssertEqual(aLog.quantity, 0.5)
-        XCTAssertEqual(aLog.snapshotStrength, "10mg")
-        XCTAssertEqual(aLog.snapshotBatchColorHex, "#3B82F6")
-        XCTAssertEqual(aLog.takenAt, at)
+        #expect(all.count == 2)
+        let aLog = try #require(all.first { $0.snapshotMedName == "A" })
+        #expect(aLog.status == DoseStatus.taken.rawValue)
+        #expect(aLog.quantity == 0.5)
+        #expect(aLog.snapshotStrength == "10mg")
+        #expect(aLog.snapshotBatchColorHex == "#3B82F6")
+        #expect(aLog.takenAt == at)
     }
 
+    @Test
     func testLogBatchTakenIsIdempotentUpsert() throws {
         let a = addMed("A", qty: 1.0)
         DoseLogService.logBatchTaken(blue, on: .now, items: [a], takenAt: .now, note: "", in: context)
         DoseLogService.logBatchTaken(blue, on: .now, items: [a], takenAt: .now, note: "", in: context)
-        XCTAssertEqual(try logs().count, 1)   // updated, not duplicated
+        #expect(try logs().count == 1)   // updated, not duplicated
     }
 
+    @Test
     func testLogBatchTakenLeavesUntouchedItemsAlone() throws {
         let a = addMed("A", qty: 1.0)
         let b = addMed("B", qty: 1.0)
@@ -62,51 +64,57 @@ final class DoseLogServiceTests: XCTestCase {
         // Batch-take only A (fill set excludes B)
         DoseLogService.logBatchTaken(blue, on: .now, items: [a], takenAt: .now, note: "", in: context)
 
-        let bLog = try XCTUnwrap(try logs().first { $0.snapshotMedName == "B" })
-        XCTAssertEqual(bLog.status, DoseStatus.skipped.rawValue)   // skip preserved
-        XCTAssertEqual(bLog.notes, "BP low")
-        XCTAssertEqual(try logs().count, 2)
+        let bLog = try #require(try logs().first { $0.snapshotMedName == "B" })
+        #expect(bLog.status == DoseStatus.skipped.rawValue)   // skip preserved
+        #expect(bLog.notes == "BP low")
+        #expect(try logs().count == 2)
     }
 
+    @Test
     func testLogMedSkipRequiresNote() throws {
         let a = addMed("A", qty: 1.0)
-        XCTAssertThrowsError(
+        #expect(throws: DoseLogServiceError.noteRequired) {
             try DoseLogService.logMed(a, on: .now, status: .skipped, takenAt: nil, note: "  ", in: context)
-        ) { XCTAssertEqual($0 as? DoseLogServiceError, .noteRequired) }
-        XCTAssertEqual(try logs().count, 0)
+        }
+        #expect(try logs().count == 0)
     }
 
+    @Test
     func testLogMedTakenAllowsEmptyNoteAndClearsTakenAtOnSkip() throws {
         let a = addMed("A", qty: 1.0)
         try DoseLogService.logMed(a, on: .now, status: .taken, takenAt: .now, note: "", in: context)
-        XCTAssertEqual(try XCTUnwrap(try logs().first).takenAt != nil, true)
+        #expect(try #require(try logs().first).takenAt != nil)
         try DoseLogService.logMed(a, on: .now, status: .skipped, takenAt: nil, note: "held", in: context)
-        let log = try XCTUnwrap(try logs().first)
-        XCTAssertEqual(log.status, DoseStatus.skipped.rawValue)
-        XCTAssertNil(log.takenAt)
-        XCTAssertEqual(try logs().count, 1)   // same row, upserted
+        let log = try #require(try logs().first)
+        #expect(log.status == DoseStatus.skipped.rawValue)
+        #expect(log.takenAt == nil)
+        #expect(try logs().count == 1)   // same row, upserted
     }
 
+    @Test
     func testRevertDeletesTheSlotRow() throws {
         let a = addMed("A", qty: 1.0)
         DoseLogService.logBatchTaken(blue, on: .now, items: [a], takenAt: .now, note: "", in: context)
         DoseLogService.revert(a, on: .now, in: context)
-        XCTAssertEqual(try logs().count, 0)
+        #expect(try logs().count == 0)
     }
 
+    @Test
     func testRevertBatchDeletesAllSlotRows() throws {
         let a = addMed("A", qty: 1.0)
         let b = addMed("B", qty: 1.0)
         DoseLogService.logBatchTaken(blue, on: .now, items: [a, b], takenAt: .now, note: "", in: context)
         DoseLogService.revertBatch(blue, on: .now, items: [a, b], in: context)
-        XCTAssertEqual(try logs().count, 0)
+        #expect(try logs().count == 0)
     }
 
+    @Test
     func testSnapshotStaysFrozenAfterRename() throws {
         let a = addMed("A", qty: 1.0)
         DoseLogService.logBatchTaken(blue, on: .now, items: [a], takenAt: .now, note: "", in: context)
         a.medication?.name = "Renamed"
         try context.save()
-        XCTAssertEqual(try XCTUnwrap(try logs().first).snapshotMedName, "A")
+        #expect(try #require(try logs().first).snapshotMedName == "A")
     }
 }
+

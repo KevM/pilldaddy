@@ -1,23 +1,18 @@
+import Foundation
 import SwiftData
-import XCTest
+import Testing
 @testable import PillDaddy
 
 @MainActor
-final class MissedReconcilerTests: XCTestCase {
+struct MissedReconcilerTests {
 
-    private var container: ModelContainer!
-    private var context: ModelContext!
+    private let container: ModelContainer
+    private let context: ModelContext
     private var cal: Calendar { Calendar.current }
 
-    override func setUp() async throws {
-        try await super.setUp()
-        container = try ModelTestSupport.makeContainer()
-        context = container.mainContext
-    }
-
-    override func tearDown() async throws {
-        context = nil; container = nil
-        try await super.tearDown()
+    init() throws {
+        self.container = try ModelTestSupport.makeContainer()
+        self.context = container.mainContext
     }
 
     @discardableResult
@@ -38,57 +33,64 @@ final class MissedReconcilerTests: XCTestCase {
 
     private func logs() throws -> [DoseLog] { try context.fetch(FetchDescriptor<DoseLog>()) }
 
+    @Test
     func testWritesMissedForUnloggedSlotPastGrace() throws {
         let (batch, _) = makeBatch(hour: 9)
         let now = DayQuery.slotDate(for: batch, on: .now).addingTimeInterval(121 * 60)
         MissedReconciler.reconcile(batches: [batch], now: now, graceMinutes: 120, lookbackDays: 0, in: context)
         let all = try logs()
-        XCTAssertEqual(all.count, 1)
-        XCTAssertEqual(all.first?.status, DoseStatus.missed.rawValue)
-        XCTAssertNil(all.first?.takenAt)
-        XCTAssertEqual(all.first?.snapshotMedName, "Med9")
+        #expect(all.count == 1)
+        #expect(all.first?.status == DoseStatus.missed.rawValue)
+        #expect(all.first?.takenAt == nil)
+        #expect(all.first?.snapshotMedName == "Med9")
     }
 
+    @Test
     func testDoesNotWriteBeforeGrace() throws {
         let (batch, _) = makeBatch(hour: 9)
         let now = DayQuery.slotDate(for: batch, on: .now).addingTimeInterval(60 * 60)
         MissedReconciler.reconcile(batches: [batch], now: now, graceMinutes: 120, lookbackDays: 0, in: context)
-        XCTAssertEqual(try logs().count, 0)
+        #expect(try logs().count == 0)
     }
 
+    @Test
     func testPreservesExistingTakenOrSkipped() throws {
         let (batch, item) = makeBatch(hour: 9)
         DoseLogService.logBatchTaken(batch, on: .now, items: [item], takenAt: .now, note: "", in: context)
         let now = DayQuery.slotDate(for: batch, on: .now).addingTimeInterval(121 * 60)
         MissedReconciler.reconcile(batches: [batch], now: now, graceMinutes: 120, lookbackDays: 0, in: context)
         let all = try logs()
-        XCTAssertEqual(all.count, 1)
-        XCTAssertEqual(all.first?.status, DoseStatus.taken.rawValue)
+        #expect(all.count == 1)
+        #expect(all.first?.status == DoseStatus.taken.rawValue)
     }
 
+    @Test
     func testIdempotent() throws {
         let (batch, _) = makeBatch(hour: 9)
         let now = DayQuery.slotDate(for: batch, on: .now).addingTimeInterval(121 * 60)
         MissedReconciler.reconcile(batches: [batch], now: now, graceMinutes: 120, lookbackDays: 0, in: context)
         MissedReconciler.reconcile(batches: [batch], now: now, graceMinutes: 120, lookbackDays: 0, in: context)
-        XCTAssertEqual(try logs().count, 1)
+        #expect(try logs().count == 1)
     }
 
+    @Test
     func testExcludesDiscontinuedMed() throws {
         let (batch, item) = makeBatch(hour: 9)
         item.medication?.isActive = false
         try context.save()
         let now = DayQuery.slotDate(for: batch, on: .now).addingTimeInterval(121 * 60)
         MissedReconciler.reconcile(batches: [batch], now: now, graceMinutes: 120, lookbackDays: 0, in: context)
-        XCTAssertEqual(try logs().count, 0)
+        #expect(try logs().count == 0)
     }
 
+    @Test
     func testRespectsWeekdayRecurrence() throws {
         let today = cal.component(.weekday, from: .now)
         let other = (today % 7) + 1
         let (batch, _) = makeBatch(hour: 9, recurrence: .weekdays, weekdays: [other])
         let now = DayQuery.slotDate(for: batch, on: .now).addingTimeInterval(121 * 60)
         MissedReconciler.reconcile(batches: [batch], now: now, graceMinutes: 120, lookbackDays: 0, in: context)
-        XCTAssertEqual(try logs().count, 0)
+        #expect(try logs().count == 0)
     }
 }
+

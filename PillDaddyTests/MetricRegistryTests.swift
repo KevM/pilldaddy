@@ -1,28 +1,32 @@
-import XCTest
+import Testing
 @testable import PillDaddy
 
-final class MetricRegistryTests: XCTestCase {
+struct MetricRegistryTests {
+    @Test
     func testEveryKindHasACompleteDefinition() {
         for kind in MetricKind.allCases {
             let def = MetricRegistry.definition(for: kind)
-            XCTAssertEqual(def.kind, kind)
-            XCTAssertFalse(def.displayName.isEmpty)
-            XCTAssertFalse(def.unit.isEmpty)
-            XCTAssertFalse(def.healthAppBreadcrumb.isEmpty)
-            XCTAssertLessThan(def.plausibleRange.lowerBound, def.plausibleRange.upperBound)
+            #expect(def.kind == kind)
+            #expect(!def.displayName.isEmpty)
+            #expect(!def.unit.isEmpty)
+            #expect(!def.healthAppBreadcrumb.isEmpty)
+            #expect(def.plausibleRange.lowerBound < def.plausibleRange.upperBound)
         }
     }
 
+    @Test
     func testOnlyWaterHasQuickAddAndCustomDefault() {
-        XCTAssertEqual(MetricRegistry.definition(for: .water).quickAdd, [8, 12, 16])
-        XCTAssertEqual(MetricRegistry.definition(for: .water).customAddDefault, 32)
-        XCTAssertNil(MetricRegistry.definition(for: .weight).quickAdd)
-        XCTAssertNil(MetricRegistry.definition(for: .weight).customAddDefault)
+        #expect(MetricRegistry.definition(for: .water).quickAdd == [8, 12, 16])
+        #expect(MetricRegistry.definition(for: .water).customAddDefault == 32)
+        #expect(MetricRegistry.definition(for: .weight).quickAdd == nil)
+        #expect(MetricRegistry.definition(for: .weight).customAddDefault == nil)
     }
 
+    @Test
     func testOnlyBloodPressureIsPaired() {
-        XCTAssertEqual(MetricRegistry.definition(for: .bloodPressure).archetype, .paired)
-        XCTAssertNotNil(MetricRegistry.definition(for: .bloodPressure).secondaryPlausibleRange)
-        XCTAssertEqual(MetricRegistry.definition(for: .weight).archetype, .scalar)
+        #expect(MetricRegistry.definition(for: .bloodPressure).archetype == .paired)
+        #expect(MetricRegistry.definition(for: .bloodPressure).secondaryPlausibleRange != nil)
+        #expect(MetricRegistry.definition(for: .weight).archetype == .scalar)
     }
 }
+

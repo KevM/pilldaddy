@@ -1,8 +1,9 @@
-import XCTest
+import Foundation
+import Testing
 @testable import PillDaddy
 
 @MainActor
-final class ReminderSettingsTests: XCTestCase {
+struct ReminderSettingsTests {
 
     private func freshDefaults() -> UserDefaults {
         let name = "test.\(UUID().uuidString)"
@@ -11,13 +12,15 @@ final class ReminderSettingsTests: XCTestCase {
         return d
     }
 
+    @Test
     func testDefaults() {
         let s = ReminderSettings(defaults: freshDefaults())
-        XCTAssertTrue(s.remindersEnabled)
-        XCTAssertEqual(s.graceMinutes, 120)
-        XCTAssertTrue(s.headsUpEnabled)
+        #expect(s.remindersEnabled)
+        #expect(s.graceMinutes == 120)
+        #expect(s.headsUpEnabled)
     }
 
+    @Test
     func testPersistsChanges() {
         let d = freshDefaults()
         let s = ReminderSettings(defaults: d)
@@ -25,8 +28,9 @@ final class ReminderSettingsTests: XCTestCase {
         s.graceMinutes = 60
         s.headsUpEnabled = false
         let reloaded = ReminderSettings(defaults: d)
-        XCTAssertFalse(reloaded.remindersEnabled)
-        XCTAssertEqual(reloaded.graceMinutes, 60)
-        XCTAssertFalse(reloaded.headsUpEnabled)
+        #expect(!reloaded.remindersEnabled)
+        #expect(reloaded.graceMinutes == 60)
+        #expect(!reloaded.headsUpEnabled)
     }
 }
+

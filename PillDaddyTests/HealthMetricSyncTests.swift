@@ -1,22 +1,17 @@
 import SwiftData
-import XCTest
+import Testing
 @testable import PillDaddy
 
 @MainActor
-final class HealthMetricSyncTests: XCTestCase {
-    private var container: ModelContainer!
-    private var context: ModelContext!
-    private var writer: FakeHealthKitWriter!
+struct HealthMetricSyncTests {
+    private let container: ModelContainer
+    private let context: ModelContext
+    private let writer: FakeHealthKitWriter
 
-    override func setUp() async throws {
-        try await super.setUp()
-        container = try ModelTestSupport.makeContainer()
-        context = container.mainContext
-        writer = FakeHealthKitWriter()
-    }
-    override func tearDown() async throws {
-        writer = nil; context = nil; container = nil
-        try await super.tearDown()
+    init() throws {
+        self.container = try ModelTestSupport.makeContainer()
+        self.context = container.mainContext
+        self.writer = FakeHealthKitWriter()
     }
 
     private func insertPending(_ kind: MetricKind, _ value: Double, secondary: Double? = nil) {
@@ -30,6 +25,7 @@ final class HealthMetricSyncTests: XCTestCase {
         })
     }
 
+    @Test
     func testResyncSyncsOnlyAuthorizedKinds() async throws {
         writer.authorizationByKind = [.weight: .authorized, .bloodPressure: .denied]
         insertPending(.weight, 180)
@@ -38,52 +34,57 @@ final class HealthMetricSyncTests: XCTestCase {
         try context.save()
 
         let synced = await HealthMetricService.resyncPending(writer: writer, in: context)
-        XCTAssertEqual(synced, 2)
+        #expect(synced == 2)
 
         let all = try context.fetch(FetchDescriptor<HealthMetric>())
-        XCTAssertTrue(all.filter { $0.metricKind == .weight }.allSatisfy { $0.healthKitSynced })
-        let bp = try XCTUnwrap(all.first { $0.metricKind == .bloodPressure })
-        XCTAssertFalse(bp.healthKitSynced)
-        XCTAssertEqual(writer.savedBatches.count, 2)
+        #expect(all.filter { $0.metricKind == .weight }.allSatisfy { $0.healthKitSynced })
+        let bp = try #require(all.first { $0.metricKind == .bloodPressure })
+        #expect(!bp.healthKitSynced)
+        #expect(writer.savedBatches.count == 2)
     }
 
+    @Test
     func testResyncIsIdempotentAndDoesNotDuplicate() async throws {
         writer.authorizationByKind = [.weight: .authorized]
         insertPending(.weight, 180)
         try context.save()
 
         let first = await HealthMetricService.resyncPending(writer: writer, in: context)
-        XCTAssertEqual(first, 1)
+        #expect(first == 1)
         let second = await HealthMetricService.resyncPending(writer: writer, in: context)
-        XCTAssertEqual(second, 0)
-        XCTAssertEqual(writer.savedBatches.count, 1)   // no duplicate save
+        #expect(second == 0)
+        #expect(writer.savedBatches.count == 1)   // no duplicate save
     }
 
+    @Test
     func testPendingCount() throws {
         insertPending(.weight, 180)
         insertPending(.water, 16)
         try context.save()
-        XCTAssertEqual(HealthMetricService.pendingCount(in: context), 2)
+        #expect(HealthMetricService.pendingCount(in: context) == 2)
     }
 
+    @Test
     func testOverallAuthorizationStates() {
         writer.authorizationByKind = allAuthorized()
-        XCTAssertEqual(HealthMetricService.overallAuthorization(writer: writer), .authorized)
+        #expect(HealthMetricService.overallAuthorization(writer: writer) == .authorized)
 
         writer.authorizationByKind = Dictionary(uniqueKeysWithValues:
             MetricKind.allCases.map { ($0, .denied) })
-        XCTAssertEqual(HealthMetricService.overallAuthorization(writer: writer), .denied)
+        #expect(HealthMetricService.overallAuthorization(writer: writer) == .denied)
 
         writer.authorizationByKind = Dictionary(uniqueKeysWithValues:
             MetricKind.allCases.map { ($0, .notDetermined) })
-        XCTAssertEqual(HealthMetricService.overallAuthorization(writer: writer), .notDetermined)
+        #expect(HealthMetricService.overallAuthorization(writer: writer) == .notDetermined)
 
         writer.authorizationByKind = allAuthorized(except: [.bloodPressure])
-        XCTAssertEqual(HealthMetricService.overallAuthorization(writer: writer), .partial)
+        #expect(HealthMetricService.overallAuthorization(writer: writer) == .partial)
     }
 
+    @Test
     func testUnavailableWriterReportsUnavailable() {
         writer.isHealthDataAvailable = false
-        XCTAssertEqual(HealthMetricService.overallAuthorization(writer: writer), .unavailable)
+        #expect(HealthMetricService.overallAuthorization(writer: writer) == .unavailable)
     }
 }
+

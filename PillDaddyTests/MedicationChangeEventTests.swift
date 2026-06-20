@@ -1,9 +1,11 @@
+import Foundation
 import SwiftData
-import XCTest
+import Testing
 @testable import PillDaddy
 
 @MainActor
-final class MedicationChangeEventTests: XCTestCase {
+struct MedicationChangeEventTests {
+    @Test
     func testChangeEventAttachesToMedication() throws {
         let container = try ModelTestSupport.makeContainer()
         let context = container.mainContext
@@ -16,13 +18,14 @@ final class MedicationChangeEventTests: XCTestCase {
         context.insert(event)
         try context.save()
 
-        let fetched = try XCTUnwrap(try context.fetch(FetchDescriptor<MedicationChangeEvent>()).first)
-        XCTAssertEqual(fetched.eventType, MedChangeType.doseChanged.rawValue)
-        XCTAssertEqual(fetched.reasoning, "Lowered for low BP")
-        XCTAssertEqual(fetched.medication?.name, "Metoprolol")
-        XCTAssertEqual(med.changeEvents?.count, 1)
+        let fetched = try #require(try context.fetch(FetchDescriptor<MedicationChangeEvent>()).first)
+        #expect(fetched.eventType == MedChangeType.doseChanged.rawValue)
+        #expect(fetched.reasoning == "Lowered for low BP")
+        #expect(fetched.medication?.name == "Metoprolol")
+        #expect(med.changeEvents?.count == 1)
     }
 
+    @Test
     func testSwapLinksOldAndNewMedicationBothDirections() throws {
         let container = try ModelTestSupport.makeContainer()
         let context = container.mainContext
@@ -40,11 +43,12 @@ final class MedicationChangeEventTests: XCTestCase {
             medication: atenolol))
         try context.save()
 
-        let fetchedAtenolol = try XCTUnwrap(
+        let fetchedAtenolol = try #require(
             try context.fetch(FetchDescriptor<Medication>(
                 predicate: #Predicate { $0.name == "Atenolol" })).first)
-        XCTAssertFalse(fetchedAtenolol.isActive)
-        XCTAssertEqual(fetchedAtenolol.successor?.name, "Metoprolol")
-        XCTAssertEqual(fetchedAtenolol.successor?.predecessor?.name, "Atenolol")
+        #expect(!fetchedAtenolol.isActive)
+        #expect(fetchedAtenolol.successor?.name == "Metoprolol")
+        #expect(fetchedAtenolol.successor?.predecessor?.name == "Atenolol")
     }
 }
+

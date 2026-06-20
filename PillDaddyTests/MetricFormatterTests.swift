@@ -1,14 +1,20 @@
-import XCTest
+import Testing
 @testable import PillDaddy
 
-final class MetricFormatterTests: XCTestCase {
+struct MetricFormatterTests {
+    @Test
     func testWholeNumbersDropDecimal() {
-        XCTAssertEqual(MetricFormatter.string(176, unit: "lb"), "176 lb")
+        #expect(MetricFormatter.string(176, unit: "lb") == "176 lb")
     }
+
+    @Test
     func testFractionsKeepOneDecimal() {
-        XCTAssertEqual(MetricFormatter.string(97.5, unit: "%"), "97.5 %")
+        #expect(MetricFormatter.string(97.5, unit: "%") == "97.5 %")
     }
+
+    @Test
     func testBloodPressurePair() {
-        XCTAssertEqual(MetricFormatter.bloodPressure(120, 80), "120/80")
+        #expect(MetricFormatter.bloodPressure(120, 80) == "120/80")
     }
 }
+

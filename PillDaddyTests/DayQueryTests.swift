@@ -1,23 +1,17 @@
+import Foundation
 import SwiftData
-import XCTest
+import Testing
 @testable import PillDaddy
 
 @MainActor
-final class DayQueryTests: XCTestCase {
+struct DayQueryTests {
 
-    private var container: ModelContainer!
-    private var context: ModelContext!
+    private let container: ModelContainer
+    private let context: ModelContext
 
-    override func setUp() async throws {
-        try await super.setUp()
-        container = try ModelTestSupport.makeContainer()
-        context = container.mainContext
-    }
-
-    override func tearDown() async throws {
-        context = nil
-        container = nil
-        try await super.tearDown()
+    init() throws {
+        self.container = try ModelTestSupport.makeContainer()
+        self.context = container.mainContext
     }
 
     private func fetchBatches() throws -> [Batch] {
@@ -25,12 +19,14 @@ final class DayQueryTests: XCTestCase {
             sortBy: [SortDescriptor(\.sortOrder), SortDescriptor(\.timeOfDay)]))
     }
 
+    @Test
     func testDailyBatchRecursEveryDay() throws {
         let b = Batch(name: "Blue", recurrenceKind: .daily)
         context.insert(b)
-        XCTAssertTrue(DayQuery.recurs(b, on: .now))
+        #expect(DayQuery.recurs(b, on: .now))
     }
 
+    @Test
     func testWeekdaysBatchOnlyRecursOnListedWeekdays() throws {
         let day = Date.now
         let wd = Calendar.current.component(.weekday, from: day)
@@ -38,10 +34,11 @@ final class DayQueryTests: XCTestCase {
                             weekdays: [1,2,3,4,5,6,7].filter { $0 != wd })
         let include = Batch(name: "Wk2", recurrenceKind: .weekdays, weekdays: [wd])
         context.insert(exclude); context.insert(include)
-        XCTAssertFalse(DayQuery.recurs(exclude, on: day))
-        XCTAssertTrue(DayQuery.recurs(include, on: day))
+        #expect(!DayQuery.recurs(exclude, on: day))
+        #expect(DayQuery.recurs(include, on: day))
     }
 
+    @Test
     func testBatchDaysExcludeDiscontinuedAndPRNAndEmptyBatches() throws {
         let blue = Batch(name: "Blue", sortOrder: 0)
         let empty = Batch(name: "Empty", sortOrder: 1)
@@ -57,12 +54,13 @@ final class DayQueryTests: XCTestCase {
         try MedicationService.discontinue(stopped, reason: "x", in: context)
 
         let days = DayQuery.batchDays(from: try fetchBatches(), on: .now)
-        XCTAssertEqual(days.count, 1)                       // Empty batch dropped
-        XCTAssertEqual(days.first?.batch.name, "Blue")
-        XCTAssertEqual(days.first?.meds.map { $0.item.medication?.name }, ["Active"])
-        XCTAssertEqual(days.first?.state, .pending)         // nothing logged yet
+        #expect(days.count == 1)                       // Empty batch dropped
+        #expect(days.first?.batch.name == "Blue")
+        #expect(days.first?.meds.map { $0.item.medication?.name } == ["Active"])
+        #expect(days.first?.state == .pending)         // nothing logged yet
     }
 
+    @Test
     func testBatchDayStateReflectsExistingLogs() throws {
         let blue = Batch(name: "Blue", timeOfDay: .now, sortOrder: 0)
         context.insert(blue)
@@ -74,19 +72,20 @@ final class DayQueryTests: XCTestCase {
             placements: [(batch: blue, quantity: 1.0)], reason: "", in: context)
         _ = (med, med2)
 
-        let item = try XCTUnwrap((blue.items ?? []).first { $0.medication?.name == "A" })
+        let item = try #require((blue.items ?? []).first { $0.medication?.name == "A" })
         let log = DoseLog(scheduledDate: .now, status: .taken, medication: item.medication, batchItem: item)
         context.insert(log)
         try context.save()
 
-        let day = try XCTUnwrap(DayQuery.batchDays(from: try fetchBatches(), on: .now).first)
-        XCTAssertEqual(day.state, .partial)
-        let aDose = try XCTUnwrap(day.meds.first { $0.item.medication?.name == "A" })
-        XCTAssertNotNil(aDose.log)
-        let bDose = try XCTUnwrap(day.meds.first { $0.item.medication?.name == "B" })
-        XCTAssertNil(bDose.log)
+        let day = try #require(DayQuery.batchDays(from: try fetchBatches(), on: .now).first)
+        #expect(day.state == .partial)
+        let aDose = try #require(day.meds.first { $0.item.medication?.name == "A" })
+        #expect(aDose.log != nil)
+        let bDose = try #require(day.meds.first { $0.item.medication?.name == "B" })
+        #expect(bDose.log == nil)
     }
 
+    @Test
     func testPRNDosesReturnActivePRNWithThatDaysLogs() throws {
         let tylenol = MedicationService.addMedication(
             name: "Tylenol", strength: "500mg", form: "tablet", isPRN: true, notes: "",
@@ -102,10 +101,11 @@ final class DayQueryTests: XCTestCase {
         let meds = try context.fetch(FetchDescriptor<Medication>(
             predicate: #Predicate { $0.isActive && $0.isPRN }, sortBy: [SortDescriptor(\.name)]))
         let prn = DayQuery.prnDoses(from: meds, on: .now)
-        XCTAssertEqual(prn.map { $0.med.name }, ["Tylenol"])
-        XCTAssertEqual(prn.first?.logs.count, 1)
+        #expect(prn.map { $0.med.name } == ["Tylenol"])
+        #expect(prn.first?.logs.count == 1)
     }
 
+    @Test
     func testCombineCombinesDateAndTime() throws {
         let cal = Calendar.current
         let dateComps = DateComponents(year: 2026, month: 6, day: 19)
@@ -115,11 +115,12 @@ final class DayQueryTests: XCTestCase {
 
         let combined = DayQuery.combine(date: date, time: time)
         let comps = cal.dateComponents([.year, .month, .day, .hour, .minute, .second], from: combined)
-        XCTAssertEqual(comps.year, 2026)
-        XCTAssertEqual(comps.month, 6)
-        XCTAssertEqual(comps.day, 19)
-        XCTAssertEqual(comps.hour, 18)
-        XCTAssertEqual(comps.minute, 25)
-        XCTAssertEqual(comps.second, 30)
+        #expect(comps.year == 2026)
+        #expect(comps.month == 6)
+        #expect(comps.day == 19)
+        #expect(comps.hour == 18)
+        #expect(comps.minute == 25)
+        #expect(comps.second == 30)
     }
 }
+
