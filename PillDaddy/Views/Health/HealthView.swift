@@ -7,8 +7,7 @@ struct HealthView: View {
     @Environment(\.modelContext) private var context
     @Query(sort: \HealthMetric.recordedAt, order: .reverse) private var metrics: [HealthMetric]
 
-    @State private var showPicker = false
-    @State private var route: MetricCaptureRoute?
+    @State private var showAdd = false
     @State private var pendingDelete: HealthMetric?
 
     private let writer: HealthKitWriting = LiveHealthKitWriter()
@@ -33,7 +32,7 @@ struct HealthView: View {
             .navigationTitle("Health")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Button { showPicker = true } label: { Image(systemName: "plus") }
+                    Button { showAdd = true } label: { Image(systemName: "plus") }
                 }
             }
             .overlay {
@@ -43,14 +42,8 @@ struct HealthView: View {
                 }
             }
         }
-        .sheet(isPresented: $showPicker) {
-            MetricPickerSheet { route = $0 }
-        }
-        .sheet(item: $route) { route in
-            switch route {
-            case .scalar(let kind): ScalarCaptureView(kind: kind, writer: writer)
-            case .vitals: VitalsCaptureView(writer: writer)
-            }
+        .sheet(isPresented: $showAdd) {
+            AddMetricFlow(writer: writer)
         }
         .sheet(item: $pendingDelete) { metric in
             DeleteMetricSheet(metric: metric) {

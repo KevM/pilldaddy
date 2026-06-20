@@ -5,9 +5,9 @@ import SwiftData
 /// written. BP is both-or-neither. Each value carries its live cue color.
 struct VitalsCaptureView: View {
     let writer: HealthKitWriting
+    let onClose: () -> Void
 
     @Environment(\.modelContext) private var context
-    @Environment(\.dismiss) private var dismiss
 
     @State private var systolic: Double?
     @State private var diastolic: Double?
@@ -20,50 +20,49 @@ struct VitalsCaptureView: View {
     private var canSave: Bool { hasAny && !bpIncomplete }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section("Blood pressure (mmHg)") {
-                    HStack {
-                        numberField("Systolic", $systolic)
-                        Text("/").foregroundStyle(.secondary)
-                        numberField("Diastolic", $diastolic)
-                    }
-                    if let s = systolic, let d = diastolic {
-                        let cue = MetricRegistry.definition(for: .bloodPressure).cue(s, d, .empty)
-                        HStack(spacing: 8) {
-                            Text(MetricFormatter.bloodPressure(s, d))
-                                .foregroundStyle(cue.color)
-                            Text(cue.label)
-                                .font(.caption)
-                                .fontWeight(.bold)
-                                .foregroundStyle(cue.color)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(cue.color.opacity(0.1), in: Capsule())
-                        }
-                        .accessibilityElement(children: .combine)
-                        .accessibilityLabel("Blood pressure status: \(cue.label)")
-                    }
-                    if bpIncomplete {
-                        Text("Enter both systolic and diastolic.")
-                            .font(.footnote).foregroundStyle(.red)
-                    }
+        Form {
+            Section("Blood pressure (mmHg)") {
+                HStack {
+                    numberField("Systolic", $systolic)
+                    Text("/").foregroundStyle(.secondary)
+                    numberField("Diastolic", $diastolic)
                 }
-                Section("Pulse (bpm)") {
-                    cuedField("Pulse", $pulse, kind: .pulse)
+                if let s = systolic, let d = diastolic {
+                    let cue = MetricRegistry.definition(for: .bloodPressure).cue(s, d, .empty)
+                    HStack(spacing: 8) {
+                        Text(MetricFormatter.bloodPressure(s, d))
+                            .foregroundStyle(cue.color)
+                        Text(cue.label)
+                            .font(.caption)
+                            .fontWeight(.bold)
+                            .foregroundStyle(cue.color)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(cue.color.opacity(0.1), in: Capsule())
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Blood pressure status: \(cue.label)")
                 }
-                Section("Oxygen (SpO₂ %)") {
-                    cuedField("SpO₂", $spo2, kind: .oxygenSaturation)
+                if bpIncomplete {
+                    Text("Enter both systolic and diastolic.")
+                        .font(.footnote).foregroundStyle(.red)
                 }
-                Section("Note") { TextField("Add a note", text: $note, axis: .vertical) }
             }
-            .navigationTitle("Vitals")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { save() }.disabled(!canSave)
-                }
+            Section("Pulse (bpm)") {
+                cuedField("Pulse", $pulse, kind: .pulse)
+            }
+            Section("Oxygen (SpO₂ %)") {
+                cuedField("SpO₂", $spo2, kind: .oxygenSaturation)
+            }
+            Section("Note") { TextField("Add a note", text: $note, axis: .vertical) }
+        }
+        .navigationTitle("Vitals")
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { onClose() } }
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save") { save() }.disabled(!canSave)
             }
         }
     }
@@ -98,13 +97,15 @@ struct VitalsCaptureView: View {
             try? await HealthMetricService.recordVitals(systolic: s, diastolic: d, pulse: p,
                                                         spo2: o, note: n, writer: writer, in: context)
         }
-        dismiss()
+        onClose()
     }
 }
 
 #if DEBUG
 #Preview {
-    VitalsCaptureView(writer: LiveHealthKitWriter())
-        .modelContainer(PreviewSupport.seededContainer())
+    NavigationStack {
+        VitalsCaptureView(writer: LiveHealthKitWriter(), onClose: {})
+            .modelContainer(PreviewSupport.seededContainer())
+    }
 }
 #endif
