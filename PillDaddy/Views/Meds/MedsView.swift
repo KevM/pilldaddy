@@ -15,24 +15,29 @@ struct MedsView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                Picker("View", selection: $mode) {
-                    ForEach(Mode.allCases) { Text($0.rawValue).tag($0) }
+            ZStack {
+                RegimeView()
+                    .opacity(mode == .regime ? 1.0 : 0.0)
+                    .disabled(mode != .regime)
+                    .allowsHitTesting(mode == .regime)
+                    .accessibilityHidden(mode != .regime)
+                AllMedsView()
+                    .opacity(mode == .allMeds ? 1.0 : 0.0)
+                    .disabled(mode != .allMeds)
+                    .allowsHitTesting(mode == .allMeds)
+                    .accessibilityHidden(mode != .allMeds)
+            }
+            .safeAreaInset(edge: .top, spacing: 0) {
+                VStack(spacing: 0) {
+                    Picker("View", selection: $mode) {
+                        ForEach(Mode.allCases) { Text($0.rawValue).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                    .padding()
+                    
+                    Divider()
                 }
-                .pickerStyle(.segmented)
-                .padding()
-                ZStack {
-                    RegimeView()
-                        .opacity(mode == .regime ? 1.0 : 0.0)
-                        .disabled(mode != .regime)
-                        .allowsHitTesting(mode == .regime)
-                        .accessibilityHidden(mode != .regime)
-                    AllMedsView()
-                        .opacity(mode == .allMeds ? 1.0 : 0.0)
-                        .disabled(mode != .allMeds)
-                        .allowsHitTesting(mode == .allMeds)
-                        .accessibilityHidden(mode != .allMeds)
-                }
+                .background(.ultraThinMaterial)
             }
             .navigationTitle("Meds")
             .toolbar {
