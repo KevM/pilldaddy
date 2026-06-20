@@ -19,8 +19,13 @@ enum SeedData {
                          timeOfDay: time(9, 0), mealRelation: .withFood, sortOrder: 0)
         let green = Batch(name: "Green", colorHex: "#10B981",
                           timeOfDay: time(19, 0), mealRelation: .afterFood, sortOrder: 1)
+        // An early batch (07:00) that is overdue by mid-morning so the missed/Live
+        // Activity paths are exercisable from seed.
+        let dawn = Batch(name: "Dawn", colorHex: "#8B5CF6",
+                         timeOfDay: time(7, 0), mealRelation: .beforeFood, sortOrder: 2)
         context.insert(blue)
         context.insert(green)
+        context.insert(dawn)
 
         // Scheduled meds
         let metoprolol = Medication(name: "Metoprolol", strength: "30mg")
@@ -32,6 +37,7 @@ enum SeedData {
         context.insert(metoprololBlue)
         context.insert(BatchItem(quantity: 0.5, medication: metoprolol, batch: green))
         context.insert(vitaminDBlue)
+        context.insert(BatchItem(quantity: 1.0, medication: vitaminD, batch: dawn))
 
         // PRN med
         let acetaminophen = Medication(name: "Acetaminophen", strength: "500mg", isPRN: true)
