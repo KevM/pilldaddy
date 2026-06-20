@@ -78,7 +78,8 @@ struct MetricDefinition {
     let secondaryUnit: String?       // "mmHg" for BP; nil otherwise
     let plausibleRange: ClosedRange<Double>          // hard bound — outside = reject save (typo)
     let secondaryPlausibleRange: ClosedRange<Double>?
-    let quickAdd: [Double]?          // [8,12,16,32] for water; nil otherwise
+    let quickAdd: [Double]?          // fixed chips: [8,12,16] for water; nil otherwise
+    let customAddDefault: Double?    // "Custom amount" entry prefill (32 oz for water); nil otherwise
     let cue: (_ value: Double, _ secondary: Double?, _ ctx: CueContext) -> MetricCue   // advisory
     let healthKit: HealthKitMapping  // how to compose the HK sample(s)
 }
@@ -137,9 +138,10 @@ disclaimer):
   and Weight both route to `ScalarCaptureView`; Vitals to `VitalsCaptureView`.
 - **`ScalarCaptureView(kind:)`** — Weight and Water. One numeric field, label/unit from the
   definition; the value carries its live **cue color**. For Water the definition's `quickAdd`
-  chips (+8/+12/+16/+32 oz) add to this entry; the screen also loads today's prior water to build
-  `CueContext.todayTotal` and shows the running daily total (e.g. "84 oz today"), so the cue
-  reflects both this entry and the day. For Weight the screen loads the latest prior weight into
+  chips (+8/+12/+16 oz) add to this entry, plus a **Custom amount** entry prefilled to
+  `customAddDefault` (32 oz) for any other amount; the screen also loads today's prior water to
+  build `CueContext.todayTotal` and shows the running daily total (e.g. "84 oz today"), so the
+  cue reflects both this entry and the day. For Weight the screen loads the latest prior weight into
   `CueContext` and shows the change (e.g. "▲ 4 lb since Jun 17") in the cue color. On save: one `HealthMetric` persisted locally, then a best-effort HealthKit write.
   Water is additive (each entry is its own reading); Weight is a snapshot. Same form; the
   difference is only how Session 5 reporting aggregates them later.
@@ -277,14 +279,17 @@ Seeded rows are local-only (`healthKitSynced = false`); seeding does not touch A
 Deleting a reading is destructive and asymmetric with our write-only model, so it is **guarded
 by a confirmation disclosure** rather than a bare swipe-delete:
 
-- Every delete prompts for confirmation (a destructive-action alert).
-- When the row was written to Apple Health (`healthKitSynced == true`), the confirmation
-  **discloses that the reading will remain in Apple Health** and must be removed there manually
-  (Health app). We intentionally do **not** delete from HealthKit — that would require
-  read/Share access and break the write-only iCloud exemption (see App Store considerations).
+- Every delete prompts for confirmation (a destructive-action prompt). Because synced rows need
+  an **(i) info disclosure**, this is a **custom confirmation sheet**, not a bare system alert
+  (`UIAlertController` can't host the affordance).
+- When the row was written to Apple Health (`healthKitSynced == true`), the sheet states that the
+  reading **stays in Apple Health**, with an **(i) info icon** that expands the *why*: PillDaddy
+  can add readings to Apple Health but can't remove them (write-only — removing would require
+  read/Share access and break the iCloud exemption; see App Store considerations); to remove it
+  there, delete it in the Health app.
 - The delete removes only the local SwiftData/CloudKit `HealthMetric` row. Unsynced rows
-  (`healthKitSynced == false` — e.g. a write that failed or was denied) get the same
-  confirmation without the Apple Health caveat.
+  (`healthKitSynced == false` — e.g. a write that failed or was denied) get the same sheet
+  without the Apple Health line / info disclosure.
 
 Add a test that the disclosure copy is driven by `healthKitSynced`, and that delete removes the
 local row only.
