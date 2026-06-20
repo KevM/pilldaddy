@@ -116,18 +116,41 @@ Takes the writer and uses `@Environment(\.modelContext)`.
 
 - Alongside the existing `.onChange(of: scenePhase) { if phase == .active { syncReminders() } }`, add a `syncHealthMetrics()` that calls `HealthMetricService.resyncPending(writer:in:)` against `container.mainContext`. This runs on every return to foreground — including right after the user flips a permission in Settings — independent of the active tab.
 
+### 7. Capture-screen permission notice (capture screens only)
+
+When a capture screen is showing a metric whose authorization is **not** `.authorized`, surface a compact contextual notice inline so the user knows the reading won't reach Apple Health and can fix it before (or after) saving. This applies to the **capture screens only** — the Health tab list keeps the prior design (a tappable per-row indicator that opens `HealthSyncStatusView` as a sheet; see §4).
+
+- New reusable view **`HealthPermissionNotice`**:
+  ```swift
+  struct HealthPermissionNotice: View {
+      let kind: MetricKind
+      let writer: HealthKitWriting
+      // ...
+  }
+  ```
+  - Renders nothing when `writer.authorizationStatus(for: kind) == .authorized` or when HealthKit is unavailable.
+  - Otherwise shows a compact, color-cued notice: "{displayName} won't be saved to Apple Health", an **Open Settings** button (`UIApplication.openSettingsURLString`), and a small **Details** link that presents the full `HealthSyncStatusView` as a sheet.
+  - Reads status into `@State` on `onAppear` and refreshes it when `scenePhase` becomes `.active`, so the notice disappears live if the user grants permission and returns. (Default the state to `.authorized` so the notice never flashes before status is determined.)
+- **`ScalarCaptureView`** embeds one `HealthPermissionNotice(kind: kind, writer: writer)` (its single metric).
+- **`VitalsCaptureView`** embeds a `HealthPermissionNotice` inside each metric's section — `.bloodPressure`, `.pulse`, `.oxygenSaturation` — so the notice is scoped per field (each can have a different status).
+
+Note: `ScalarCaptureView` and `VitalsCaptureView` are **also** modified by Feature A (navigation push). The plan sequences both edits to these two files together to avoid churn.
+
 ### Files
 
 - Modify: `PillDaddy/Services/HealthKitWriting.swift` (enum + protocol method + live impl)
 - Modify: `PillDaddyTests/HealthKitTestSupport.swift` (fake gains `authorizationByKind` + status method)
 - Modify: `PillDaddy/Services/HealthMetricService.swift` (`pendingCount`, `overallAuthorization`, `resyncPending`)
 - Create: `PillDaddy/Views/Health/HealthSyncStatusView.swift`
+- Create: `PillDaddy/Views/Health/HealthPermissionNotice.swift` (capture-screen inline notice, §7)
 - Modify: `PillDaddy/Views/Health/HealthView.swift` (indicator → tappable sheet; symbol swap)
+- Modify: `PillDaddy/Views/Health/ScalarCaptureView.swift` (embed notice; also Feature A)
+- Modify: `PillDaddy/Views/Health/VitalsCaptureView.swift` (embed per-field notices; also Feature A)
 - Modify: `PillDaddy/Views/Settings/SettingsView.swift` (Apple Health section)
 - Modify: `PillDaddy/PillDaddyApp.swift` (foreground resync)
 - Create: `PillDaddyTests/HealthMetricSyncTests.swift` (resync + overallAuthorization)
 
-Adding `HealthSyncStatusView.swift` and the new test file requires `xcodegen generate` before building.
+Adding `HealthSyncStatusView.swift`, `HealthPermissionNotice.swift`, and the new test file requires `xcodegen generate` before building.
 
 ### Testing (Feature B)
 
