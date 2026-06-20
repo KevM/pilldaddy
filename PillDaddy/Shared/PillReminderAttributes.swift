@@ -1,4 +1,5 @@
 import Foundation
+import ActivityKit
 
 /// Escalation stage for an overdue batch, derived from how far through the grace
 /// window the dose is. Pure + shared between the app and the widget extension.
@@ -17,3 +18,20 @@ enum ReminderTier: String, Codable, Hashable {
         }
     }
 }
+
+/// Describes one overdue/due batch surfaced as a Live Activity.
+struct PillReminderAttributes: ActivityAttributes {
+    /// Static for the life of the activity.
+    let batchID: String       // Batch.uuid.uuidString
+    let batchName: String
+    let colorHex: String
+    let medCount: Int
+
+    /// Dynamic, updated as time passes.
+    struct ContentState: Codable, Hashable {
+        let scheduledDate: Date   // batch slot time
+        let graceEndDate: Date    // when it becomes "missed"
+        let tier: ReminderTier
+    }
+}
+
