@@ -1,25 +1,19 @@
 import SwiftData
-import XCTest
+import Testing
 @testable import PillDaddy
 
 @MainActor
-final class RegimeQueryTests: XCTestCase {
+struct RegimeQueryTests {
 
-    private var container: ModelContainer!
-    private var context: ModelContext!
+    private let container: ModelContainer
+    private let context: ModelContext
 
-    override func setUp() async throws {
-        try await super.setUp()
-        container = try ModelTestSupport.makeContainer()
-        context = container.mainContext
+    init() throws {
+        self.container = try ModelTestSupport.makeContainer()
+        self.context = container.mainContext
     }
 
-    override func tearDown() async throws {
-        context = nil
-        container = nil
-        try await super.tearDown()
-    }
-
+    @Test
     func testActiveBatchGroupsExcludeDiscontinuedAndPRN() throws {
         let blue = Batch(name: "Blue", sortOrder: 0)
         context.insert(blue)
@@ -37,11 +31,12 @@ final class RegimeQueryTests: XCTestCase {
         try MedicationService.discontinue(discontinued, reason: "stop", in: context)
 
         let groups = try RegimeQuery.activeBatchGroups(in: context)
-        XCTAssertEqual(groups.count, 1)
-        XCTAssertEqual(groups.first?.items.count, 1)
-        XCTAssertEqual(groups.first?.items.first?.medication?.name, "Active")
+        #expect(groups.count == 1)
+        #expect(groups.first?.items.count == 1)
+        #expect(groups.first?.items.first?.medication?.name == "Active")
     }
 
+    @Test
     func testActivePRNMedsReturnsOnlyActivePRN() throws {
         _ = MedicationService.addMedication(
             name: "Tylenol", strength: "500mg", form: "tablet",
@@ -52,6 +47,7 @@ final class RegimeQueryTests: XCTestCase {
         _ = scheduled
 
         let prn = try RegimeQuery.activePRNMeds(in: context)
-        XCTAssertEqual(prn.map(\.name), ["Tylenol"])
+        #expect(prn.map(\.name) == ["Tylenol"])
     }
 }
+

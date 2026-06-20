@@ -1,9 +1,11 @@
 import SwiftData
-import XCTest
+import Testing
 @testable import PillDaddy
 
 @MainActor
-final class DoseLogTests: XCTestCase {
+struct DoseLogTests {
+
+    @Test
     func testScheduledDoseLogLinksMedicationAndBatchItem() throws {
         let container = try ModelTestSupport.makeContainer()
         let context = container.mainContext
@@ -20,14 +22,15 @@ final class DoseLogTests: XCTestCase {
         context.insert(log)
         try context.save()
 
-        let fetched = try XCTUnwrap(try context.fetch(FetchDescriptor<DoseLog>()).first)
-        XCTAssertEqual(fetched.status, DoseStatus.taken.rawValue)
-        XCTAssertEqual(fetched.snapshotMedName, "Metoprolol")
-        XCTAssertEqual(fetched.medication?.name, "Metoprolol")
-        XCTAssertEqual(fetched.batchItem?.quantity, 1.0)
-        XCTAssertEqual(med.doseLogs?.count, 1)
+        let fetched = try #require(try context.fetch(FetchDescriptor<DoseLog>()).first)
+        #expect(fetched.status == DoseStatus.taken.rawValue)
+        #expect(fetched.snapshotMedName == "Metoprolol")
+        #expect(fetched.medication?.name == "Metoprolol")
+        #expect(fetched.batchItem?.quantity == 1.0)
+        #expect(med.doseLogs?.count == 1)
     }
 
+    @Test
     func testPRNDoseLogHasNoBatchItem() throws {
         let container = try ModelTestSupport.makeContainer()
         let context = container.mainContext
@@ -39,8 +42,9 @@ final class DoseLogTests: XCTestCase {
         context.insert(log)
         try context.save()
 
-        let fetched = try XCTUnwrap(try context.fetch(FetchDescriptor<DoseLog>()).first)
-        XCTAssertNil(fetched.batchItem)
-        XCTAssertEqual(fetched.medication?.name, "Acetaminophen")
+        let fetched = try #require(try context.fetch(FetchDescriptor<DoseLog>()).first)
+        #expect(fetched.batchItem == nil)
+        #expect(fetched.medication?.name == "Acetaminophen")
     }
 }
+

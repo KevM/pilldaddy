@@ -1,23 +1,17 @@
+import Foundation
 import SwiftData
-import XCTest
+import Testing
 @testable import PillDaddy
 
 @MainActor
-final class MedicationLineageTests: XCTestCase {
+struct MedicationLineageTests {
 
-    private var container: ModelContainer!
-    private var context: ModelContext!
+    private let container: ModelContainer
+    private let context: ModelContext
 
-    override func setUp() async throws {
-        try await super.setUp()
-        container = try ModelTestSupport.makeContainer()
-        context = container.mainContext
-    }
-
-    override func tearDown() async throws {
-        context = nil
-        container = nil
-        try await super.tearDown()
+    init() throws {
+        self.container = try ModelTestSupport.makeContainer()
+        self.context = container.mainContext
     }
 
     /// Builds A → B → C and returns the three meds in chain order.
@@ -31,24 +25,28 @@ final class MedicationLineageTests: XCTestCase {
         return (a, b, c)
     }
 
+    @Test
     func testOrderedFromMidChainReturnsWholeLineOldestFirst() {
         let chain = makeChain()
         let line = MedicationLineage.ordered(from: chain.b)
-        XCTAssertEqual(line.map(\.name), ["Atenolol", "Metoprolol", "Bisoprolol"])
+        #expect(line.map(\.name) == ["Atenolol", "Metoprolol", "Bisoprolol"])
     }
 
+    @Test
     func testOrderedFromTipReturnsWholeLine() {
         let chain = makeChain()
         let line = MedicationLineage.ordered(from: chain.c)
-        XCTAssertEqual(line.map(\.name), ["Atenolol", "Metoprolol", "Bisoprolol"])
+        #expect(line.map(\.name) == ["Atenolol", "Metoprolol", "Bisoprolol"])
     }
 
+    @Test
     func testOrderedForSingleMedIsJustItself() {
         let med = Medication(name: "Vitamin D", strength: "1000 IU")
         context.insert(med)
-        XCTAssertEqual(MedicationLineage.ordered(from: med).map(\.name), ["Vitamin D"])
+        #expect(MedicationLineage.ordered(from: med).map(\.name) == ["Vitamin D"])
     }
 
+    @Test
     func testOrderedTerminatesOnCycle() {
         let a = Medication(name: "A", strength: "1")
         let b = Medication(name: "B", strength: "1")
@@ -57,20 +55,21 @@ final class MedicationLineageTests: XCTestCase {
         b.successor = a   // malformed cycle
         let line = MedicationLineage.ordered(from: a)
         // Must terminate and visit each med at most once.
-        XCTAssertEqual(Set(line.map(\.name)), ["A", "B"])
-        XCTAssertEqual(line.count, 2)
+        #expect(Set(line.map(\.name)) == ["A", "B"])
+        #expect(line.count == 2)
     }
 
     /// Helper: attach an event with an explicit timestamp.
     private func addEvent(_ type: MedChangeType, to med: Medication,
-                          daysAgo: Int, reasoning: String = "",
-                          oldValue: String = "", newValue: String = "") {
+                           daysAgo: Int, reasoning: String = "",
+                           oldValue: String = "", newValue: String = "") {
         let ts = Calendar.current.date(byAdding: .day, value: -daysAgo, to: .now)!
         context.insert(MedicationChangeEvent(
             timestamp: ts, type: type, reasoning: reasoning,
             oldValue: oldValue, newValue: newValue, medication: med))
     }
 
+    @Test
     func testEventsMergeChainNewestFirst() {
         let chain = makeChain()
         addEvent(.added, to: chain.a, daysAgo: 150)
@@ -80,10 +79,11 @@ final class MedicationLineageTests: XCTestCase {
 
         let events = MedicationLineage.events(from: chain.c)
         // Newest first; the suppressed `added` on B/C never existed here.
-        XCTAssertEqual(events.map { MedChangeType(rawValue: $0.event.eventType) },
-                       [.doseChanged, .swapped, .swapped, .added])
+        #expect(events.map { MedChangeType(rawValue: $0.event.eventType) } ==
+               [.doseChanged, .swapped, .swapped, .added])
     }
 
+    @Test
     func testEventsSuppressAddedOnSwapBornMeds() {
         let chain = makeChain()
         addEvent(.added, to: chain.a, daysAgo: 100)   // root: kept
@@ -91,21 +91,23 @@ final class MedicationLineageTests: XCTestCase {
         addEvent(.added, to: chain.c, daysAgo: 30)    // swap-born: suppressed
 
         let events = MedicationLineage.events(from: chain.c)
-        XCTAssertEqual(events.count, 1)
-        XCTAssertEqual(events.first?.owningMed.name, "Atenolol")
+        #expect(events.count == 1)
+        #expect(events.first?.owningMed.name == "Atenolol")
     }
 
-    func testEventsMarkAnchorAndSuccessorName() {
+    @Test
+    func testEventsMarkAnchorAndSuccessorName() throws {
         let chain = makeChain()
         addEvent(.swapped, to: chain.a, daysAgo: 100)   // owned by Atenolol → successor Metoprolol
         addEvent(.doseChanged, to: chain.b, daysAgo: 60) // anchor
 
         let events = MedicationLineage.events(from: chain.b)
-        let swap = try! XCTUnwrap(events.first { $0.event.eventType == MedChangeType.swapped.rawValue })
-        XCTAssertEqual(swap.successorName, "Metoprolol")
-        XCTAssertFalse(swap.isAnchor)
+        let swap = try #require(events.first { $0.event.eventType == MedChangeType.swapped.rawValue })
+        #expect(swap.successorName == "Metoprolol")
+        #expect(!swap.isAnchor)
 
-        let dose = try! XCTUnwrap(events.first { $0.event.eventType == MedChangeType.doseChanged.rawValue })
-        XCTAssertTrue(dose.isAnchor)
+        let dose = try #require(events.first { $0.event.eventType == MedChangeType.doseChanged.rawValue })
+        #expect(dose.isAnchor)
     }
 }
+

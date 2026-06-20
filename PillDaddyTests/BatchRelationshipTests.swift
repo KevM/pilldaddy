@@ -1,9 +1,11 @@
+import Foundation
 import SwiftData
-import XCTest
+import Testing
 @testable import PillDaddy
 
 @MainActor
-final class BatchRelationshipTests: XCTestCase {
+struct BatchRelationshipTests {
+    @Test
     func testMedicationInTwoBatchesAtDifferentQuantities() throws {
         let container = try ModelTestSupport.makeContainer()
         let context = container.mainContext
@@ -21,30 +23,32 @@ final class BatchRelationshipTests: XCTestCase {
         context.insert(evening)
         try context.save()
 
-        let fetchedMed = try XCTUnwrap(try context.fetch(FetchDescriptor<Medication>()).first)
-        XCTAssertEqual(fetchedMed.batchItems?.count, 2)
+        let fetchedMed = try #require(try context.fetch(FetchDescriptor<Medication>()).first)
+        #expect(fetchedMed.batchItems?.count == 2)
         let quantities = (fetchedMed.batchItems ?? []).map(\.quantity).sorted()
-        XCTAssertEqual(quantities, [0.5, 1.0])
+        #expect(quantities == [0.5, 1.0])
 
-        let fetchedBlue = try XCTUnwrap(
+        let fetchedBlue = try #require(
             try context.fetch(FetchDescriptor<Batch>(
                 predicate: #Predicate { $0.name == "Blue" })).first)
-        XCTAssertEqual(fetchedBlue.items?.count, 1)
-        XCTAssertEqual(fetchedBlue.items?.first?.medication?.name, "Metoprolol")
-        XCTAssertEqual(fetchedBlue.items?.first?.quantity, 1.0)
+        #expect(fetchedBlue.items?.count == 1)
+        #expect(fetchedBlue.items?.first?.medication?.name == "Metoprolol")
+        #expect(fetchedBlue.items?.first?.quantity == 1.0)
     }
 
+    @Test
     func testDefaultsForBatch() throws {
         let container = try ModelTestSupport.makeContainer()
         let context = container.mainContext
         let batch = Batch()
         context.insert(batch)
         try context.save()
-        XCTAssertEqual(batch.mealRelation, MealRelation.none.rawValue)
-        XCTAssertEqual(batch.recurrenceKind, RecurrenceKind.daily.rawValue)
-        XCTAssertEqual(batch.items ?? [], [])
+        #expect(batch.mealRelation == MealRelation.none.rawValue)
+        #expect(batch.recurrenceKind == RecurrenceKind.daily.rawValue)
+        #expect(batch.items ?? [] == [])
     }
 
+    @Test
     func testBatchHasStableDistinctUUID() throws {
         let container = try ModelTestSupport.makeContainer()
         let context = container.mainContext
@@ -52,9 +56,10 @@ final class BatchRelationshipTests: XCTestCase {
         let b = Batch(name: "B")
         context.insert(a); context.insert(b)
         try context.save()
-        XCTAssertNotEqual(a.uuid, b.uuid)
+        #expect(a.uuid != b.uuid)
         let savedID = a.uuid
-        XCTAssertEqual(a.uuid, savedID)   // stable across access
+        #expect(a.uuid == savedID)   // stable across access
     }
 }
+
 
