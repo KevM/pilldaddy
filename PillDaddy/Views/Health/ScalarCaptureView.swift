@@ -45,6 +45,7 @@ struct ScalarCaptureView: View {
                     Text("\(Int(total + value)) oz today")
                         .font(.footnote).foregroundStyle(cue.color)
                 }
+                HealthPermissionNotice(kind: kind, writer: writer)
             }
 
             if let chips = def.quickAdd {

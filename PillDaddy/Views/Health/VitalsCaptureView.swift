@@ -47,12 +47,15 @@ struct VitalsCaptureView: View {
                     Text("Enter both systolic and diastolic.")
                         .font(.footnote).foregroundStyle(.red)
                 }
+                HealthPermissionNotice(kind: .bloodPressure, writer: writer)
             }
             Section("Pulse (bpm)") {
                 cuedField("Pulse", $pulse, kind: .pulse)
+                HealthPermissionNotice(kind: .pulse, writer: writer)
             }
             Section("Oxygen (SpO₂ %)") {
                 cuedField("SpO₂", $spo2, kind: .oxygenSaturation)
+                HealthPermissionNotice(kind: .oxygenSaturation, writer: writer)
             }
             Section("Note") { TextField("Add a note", text: $note, axis: .vertical) }
         }
