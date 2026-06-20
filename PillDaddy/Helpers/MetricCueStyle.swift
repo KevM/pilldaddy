@@ -8,4 +8,12 @@ extension MetricCue {
         case .alert: .red
         }
     }
+
+    var label: String {
+        switch self {
+        case .normal: "Normal"
+        case .caution: "Caution"
+        case .alert: "Alert"
+        }
+    }
 }

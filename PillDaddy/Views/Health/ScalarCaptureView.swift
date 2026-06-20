@@ -17,15 +17,28 @@ struct ScalarCaptureView: View {
 
     private var def: MetricDefinition { MetricRegistry.definition(for: kind) }
     private var cue: MetricCue { def.cue(value, nil, ctx) }
-    private var canSave: Bool { def.plausibleRange.contains(value) }
+    private var canSave: Bool { def.plausibleRange.contains(value) && (kind != .water || value > 0) }
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    Text(MetricFormatter.string(value, unit: def.unit))
-                        .font(.system(size: 40, weight: .medium))
-                        .foregroundStyle(cue.color)
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(MetricFormatter.string(value, unit: def.unit))
+                            .font(.system(size: 40, weight: .medium))
+                            .foregroundStyle(cue.color)
+                        
+                        Text(cue.label)
+                            .font(.caption)
+                            .fontWeight(.bold)
+                            .foregroundStyle(cue.color)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(cue.color.opacity(0.1), in: Capsule())
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("\(MetricFormatter.string(value, unit: def.unit)) - status: \(cue.label)")
+
                     if kind == .weight, let prev = ctx.previousValue {
                         Text(deltaText(from: prev)).font(.footnote).foregroundStyle(cue.color)
                     }

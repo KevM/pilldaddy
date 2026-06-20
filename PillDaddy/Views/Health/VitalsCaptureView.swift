@@ -29,8 +29,20 @@ struct VitalsCaptureView: View {
                         numberField("Diastolic", $diastolic)
                     }
                     if let s = systolic, let d = diastolic {
-                        Text(MetricFormatter.bloodPressure(s, d))
-                            .foregroundStyle(MetricRegistry.definition(for: .bloodPressure).cue(s, d, .empty).color)
+                        let cue = MetricRegistry.definition(for: .bloodPressure).cue(s, d, .empty)
+                        HStack(spacing: 8) {
+                            Text(MetricFormatter.bloodPressure(s, d))
+                                .foregroundStyle(cue.color)
+                            Text(cue.label)
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .foregroundStyle(cue.color)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(cue.color.opacity(0.1), in: Capsule())
+                        }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("Blood pressure status: \(cue.label)")
                     }
                     if bpIncomplete {
                         Text("Enter both systolic and diastolic.")
@@ -65,9 +77,17 @@ struct VitalsCaptureView: View {
         HStack {
             numberField(label, binding)
             if let v = binding.wrappedValue {
-                Circle()
-                    .fill(MetricRegistry.definition(for: kind).cue(v, nil, .empty).color)
-                    .frame(width: 10, height: 10)
+                let cue = MetricRegistry.definition(for: kind).cue(v, nil, .empty)
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(cue.color)
+                        .frame(width: 10, height: 10)
+                    Text(cue.label)
+                        .font(.caption)
+                        .foregroundStyle(cue.color)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("\(label) status: \(cue.label)")
             }
         }
     }
