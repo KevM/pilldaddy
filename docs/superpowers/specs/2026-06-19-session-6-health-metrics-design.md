@@ -82,6 +82,7 @@ struct MetricDefinition {
     let customAddDefault: Double?    // "Custom amount" entry prefill (32 oz for water); nil otherwise
     let cue: (_ value: Double, _ secondary: Double?, _ ctx: CueContext) -> MetricCue   // advisory
     let healthKit: HealthKitMapping  // how to compose the HK sample(s)
+    let healthAppBreadcrumb: String  // where to find it in Health, e.g. "Browse › Heart › Blood Pressure"
 }
 ```
 
@@ -168,14 +169,17 @@ disclaimer):
   immediately; on success set `healthKitSynced = true` + `healthKitSampleUUID`. If Health is
   unavailable/denied or the save fails, the row simply stays unsynced (best-effort — no retry
   queue or background sync in the MVP; see Future work).
-- **Mapping:**
-  | Metric | HealthKit |
-  |--------|-----------|
-  | Weight | `HKQuantitySample` `bodyMass`, `HKUnit.pound()` |
-  | Water | `HKQuantitySample` `dietaryWater`, `HKUnit.fluidOunceUS()` |
-  | Pulse | `HKQuantitySample` `heartRate`, count/min |
-  | SpO₂ | `HKQuantitySample` `oxygenSaturation`, percent (0–1) |
-  | Blood Pressure | `HKCorrelation` `bloodPressure` of `bloodPressureSystolic` + `bloodPressureDiastolic`, `mmHg` |
+- **Mapping** (HK sample type + Health-app breadcrumb, both per-metric registry data):
+  | Metric | HealthKit | `healthAppBreadcrumb` |
+  |--------|-----------|-----------------------|
+  | Weight | `HKQuantitySample` `bodyMass`, `HKUnit.pound()` | Browse › Body Measurements › Weight |
+  | Water | `HKQuantitySample` `dietaryWater`, `HKUnit.fluidOunceUS()` | Browse › Nutrition › Water |
+  | Pulse | `HKQuantitySample` `heartRate`, count/min | Browse › Heart › Heart Rate |
+  | SpO₂ | `HKQuantitySample` `oxygenSaturation`, percent (0–1) | Browse › Respiratory › Blood Oxygen |
+  | Blood Pressure | `HKCorrelation` `bloodPressure` of `bloodPressureSystolic` + `bloodPressureDiastolic`, `mmHg` | Browse › Heart › Blood Pressure |
+
+  (Breadcrumbs reflect the current Health-app organization; Apple reshuffles occasionally, so
+  they're guidance, not guarantees.)
 
 ### Device assumption
 
@@ -289,8 +293,14 @@ by a confirmation disclosure** rather than a bare swipe-delete:
 - When the row was written to Apple Health (`healthKitSynced == true`), the sheet states that the
   reading **stays in Apple Health**, with an **(i) info icon** that expands the *why*: PillDaddy
   can add readings to Apple Health but can't remove them (write-only — removing would require
-  read/Share access and break the iCloud exemption; see App Store considerations); to remove it
-  there, delete it in the Health app.
+  read/Share access and break the iCloud exemption; see App Store considerations).
+- The expanded disclosure offers an **Open Health** action and the metric's **breadcrumb** to the
+  right view (`healthAppBreadcrumb`, e.g. "Browse › Heart › Blood Pressure"). Apple exposes **no
+  public deep link into a specific Health data-type view**, so this is best-effort: open the
+  Health app via the (undocumented) `x-apple-health://` scheme — guarded by `canOpenURL`, which
+  needs `x-apple-health` in `LSApplicationQueriesSchemes` ([`project.yml`](../../../project.yml)) —
+  landing on Health's main screen, then the breadcrumb guides the last step. If the scheme is
+  unavailable, degrade gracefully to the breadcrumb text alone.
 - The delete removes only the local SwiftData/CloudKit `HealthMetric` row. Unsynced rows
   (`healthKitSynced == false` — e.g. a write that failed or was denied) get the same sheet
   without the Apple Health line / info disclosure.
