@@ -425,5 +425,48 @@ struct MedicationServiceTests {
             try MedicationService.moveToBatch(inMorning, to: afternoon, in: context)
         }
     }
+
+    @Test
+    func testDeleteBatchThrowsWhenActiveMedicationPresent() throws {
+        let batch = Batch(name: "Morning")
+        context.insert(batch)
+        let med = Medication(name: "Metoprolol", strengthValue: 30, strengthUnit: "mg",
+                             dailyDoseTarget: 1.0, form: "tablet", isActive: true)
+        context.insert(med)
+        context.insert(BatchItem(quantity: 1.0, medication: med, batch: batch))
+        try context.save()
+
+        #expect(throws: BatchError.hasActiveMedications) {
+            try MedicationService.deleteBatch(batch, in: context)
+        }
+        #expect(try context.fetch(FetchDescriptor<Batch>()).count == 1)
+    }
+
+    @Test
+    func testDeleteBatchSucceedsWhenNoActiveMedsAndPreservesDoseLogSnapshots() throws {
+        let batch = Batch(name: "Morning", colorHex: "#3B82F6")
+        context.insert(batch)
+        let med = Medication(name: "Metoprolol", strengthValue: 30, strengthUnit: "mg",
+                             dailyDoseTarget: 1.0, form: "tablet", isActive: false)
+        context.insert(med)
+        let item = BatchItem(quantity: 1.0, medication: med, batch: batch)
+        context.insert(item)
+        let log = DoseLog(scheduledDate: .now, takenAt: .now, status: .taken, quantity: 1.0,
+                          snapshotMedName: "Metoprolol", snapshotStrength: "30 mg",
+                          snapshotStrengthValue: 30, snapshotStrengthUnit: "mg",
+                          snapshotBatchColorHex: "#3B82F6", medication: med, batchItem: item)
+        context.insert(log)
+        try context.save()
+
+        try MedicationService.deleteBatch(batch, in: context)
+
+        #expect(try context.fetch(FetchDescriptor<Batch>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<BatchItem>()).isEmpty)   // cascade removed the join row
+        let logs = try context.fetch(FetchDescriptor<DoseLog>())
+        #expect(logs.count == 1)
+        #expect(logs.first?.batchItem == nil)                              // link nullified
+        #expect(logs.first?.snapshotMedName == "Metoprolol")              // snapshot survives
+        #expect(logs.first?.snapshotBatchColorHex == "#3B82F6")
+    }
 }
 

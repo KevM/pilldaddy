@@ -13,6 +13,10 @@ enum MembershipError: Error, Equatable {
     case alreadyInBatch
 }
 
+enum BatchError: Error, Equatable {
+    case hasActiveMedications
+}
+
 /// Owns every multi-step medication mutation as a single atomic save, so the
 /// "caregiver can't get it wrong" guarantees live in one unit-testable place.
 @MainActor
@@ -133,6 +137,18 @@ enum MedicationService {
         context.insert(MedicationChangeEvent(
             type: .scheduleChanged, reasoning: "",
             oldValue: old, newValue: new, medication: med))
+        try context.save()
+    }
+
+    /// Hard-deletes a batch, allowed only when no active (non-PRN) medication is
+    /// a member. Remaining (discontinued-med) join rows cascade away; dose-log
+    /// snapshots survive intact.
+    static func deleteBatch(_ batch: Batch, in context: ModelContext) throws {
+        let hasActive = (batch.items ?? []).contains {
+            ($0.medication?.isActive ?? false) && !($0.medication?.isPRN ?? false)
+        }
+        if hasActive { throw BatchError.hasActiveMedications }
+        context.delete(batch)
         try context.save()
     }
 
