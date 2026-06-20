@@ -98,6 +98,10 @@ enum MedicationService {
         _ med: Medication, _ batch: Batch, quantity: Double,
         in context: ModelContext
     ) throws {
+        let medID = med.persistentModelID
+        let duplicate = (batch.items ?? []).contains { $0.medication?.persistentModelID == medID }
+        if duplicate { throw MembershipError.alreadyInBatch }
+
         if DoseAllocation.isOverTarget(allocated: DoseAllocation.allocated(med) + quantity, target: med.dailyDoseTarget) {
             throw DoseAllocationError.exceedsDailyTarget
         }
@@ -246,7 +250,8 @@ enum MedicationService {
     static func membershipDescription(_ item: BatchItem) -> String {
         let batch = item.batch?.name ?? "?"
         let form = item.medication?.form ?? ""
-        return "\(batch) · \(DoseFormat.qty(item.quantity)) \(form)"
+        let desc = "\(batch) · \(DoseFormat.qty(item.quantity)) \(form)"
+        return desc.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// Human-readable summary of a med's current dose, deterministic (sorted by batch name).

@@ -9,6 +9,7 @@ struct MedicationDetailView: View {
 
     @State private var sheet: DetailSheet?
     @State private var movingItem: BatchItem?
+    @State private var errorMessage: String?
 
     enum DetailSheet: Identifiable {
         case edit, dose, instructions, swap, lifecycle, addToBatch
@@ -38,7 +39,11 @@ struct MedicationDetailView: View {
                         Menu {
                             Button("Move to another batch…") { movingItem = item }
                             Button("Remove from batch", role: .destructive) {
-                                try? MedicationService.removeFromBatch(item, in: context)
+                                do {
+                                    try MedicationService.removeFromBatch(item, in: context)
+                                } catch {
+                                    errorMessage = error.localizedDescription
+                                }
                             }
                         } label: {
                             HStack {
@@ -100,6 +105,14 @@ struct MedicationDetailView: View {
         }
         .sheet(item: $movingItem) { item in
             MoveBatchSheet(item: item)
+        }
+        .alert("Error", isPresented: Binding(
+            get: { errorMessage != nil },
+            set: { if !$0 { errorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            if let errorMessage { Text(errorMessage) }
         }
     }
 }

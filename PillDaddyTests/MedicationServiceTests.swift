@@ -468,5 +468,21 @@ struct MedicationServiceTests {
         #expect(logs.first?.snapshotMedName == "Metoprolol")              // snapshot survives
         #expect(logs.first?.snapshotBatchColorHex == "#3B82F6")
     }
+
+    @Test
+    func testAddToBatchRejectsDuplicateMembership() throws {
+        let blue = Batch(name: "Blue")
+        context.insert(blue)
+        let med = Medication(name: "Metoprolol", strengthValue: 30, strengthUnit: "mg",
+                             dailyDoseTarget: 2.0, form: "tablet")
+        context.insert(med)
+        try context.save()
+
+        try MedicationService.addToBatch(med, blue, quantity: 1.0, in: context)
+
+        #expect(throws: MembershipError.alreadyInBatch) {
+            try MedicationService.addToBatch(med, blue, quantity: 1.0, in: context)
+        }
+    }
 }
 

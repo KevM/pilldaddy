@@ -65,7 +65,11 @@ struct BatchEditor: View {
                         }
                         .onDelete { offsets in
                             for index in offsets {
-                                try? MedicationService.removeFromBatch(activeItems[index], in: context)
+                                do {
+                                    try MedicationService.removeFromBatch(activeItems[index], in: context)
+                                } catch {
+                                    errorMessage = error.localizedDescription
+                                }
                             }
                         }
                         Menu("Add medication") {
@@ -142,11 +146,25 @@ struct BatchEditor: View {
             .sheet(item: $editingMed) { med in
                 ChangeDoseSheet(medication: med)
             }
+            .alert("Error", isPresented: Binding(
+                get: { errorMessage != nil && addingMed == nil },
+                set: { if !$0 { errorMessage = nil } }
+            )) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                if let errorMessage {
+                    Text(errorMessage)
+                }
+            }
             .alert("Delete this batch?", isPresented: $confirmingDelete) {
                 Button("Delete", role: .destructive) {
                     if let batch {
-                        try? MedicationService.deleteBatch(batch, in: context)
-                        dismiss()
+                        do {
+                            try MedicationService.deleteBatch(batch, in: context)
+                            dismiss()
+                        } catch {
+                            errorMessage = error.localizedDescription
+                        }
                     }
                 }
                 Button("Cancel", role: .cancel) {}
