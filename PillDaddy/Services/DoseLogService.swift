@@ -69,6 +69,7 @@ enum DoseLogService {
             scheduledDate: takenAt, takenAt: takenAt, status: .taken,
             quantity: quantity, notes: note,
             snapshotMedName: med.name, snapshotStrength: med.strengthDescription,
+            snapshotStrengthValue: med.strengthValue, snapshotStrengthUnit: med.strengthUnit,
             snapshotBatchColorHex: "", medication: med, batchItem: nil)
         context.insert(log)
         try? context.save()
@@ -104,6 +105,8 @@ enum DoseLogService {
         log.notes = note
         log.snapshotMedName = item.medication?.name ?? ""
         log.snapshotStrength = item.medication?.strengthDescription ?? ""
+        log.snapshotStrengthValue = item.medication?.strengthValue ?? 0
+        log.snapshotStrengthUnit = item.medication?.strengthUnit ?? "mg"
         log.snapshotBatchColorHex = item.batch?.colorHex ?? ""
         return log
     }
