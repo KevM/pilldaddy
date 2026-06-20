@@ -10,5 +10,6 @@ This project contains rules and expectations for any agentic AI developers assis
 4. **No Placeholders**: Never introduce uncompilable code, missing imports, or empty placeholder methods.
 5. **Local Git Commits**: Always commit changes locally at the end of each task or when asked to implement a plan.
 6. **Swift Testing**: Always write new tests using the modern `Swift Testing` framework (`import Testing`, `@Test`, `@Suite`, `#expect`, `#require`) instead of `XCTest`. Do not use `XCTestCase` subclassing or import `XCTest`.
+7. **Simulator**: When building or testing against the iOS Simulator, use **iPhone 17** as the destination (e.g. `-destination 'platform=iOS Simulator,name=iPhone 17'`).
 
 

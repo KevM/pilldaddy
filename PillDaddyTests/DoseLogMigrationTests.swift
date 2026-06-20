@@ -3,6 +3,9 @@ import SwiftData
 import Testing
 @testable import PillDaddy
 
+// Serialized: these tests mutate the process-global `didRunDoseLogPRNBackfill`
+// UserDefaults key, so they must not run in parallel with each other.
+@Suite(.serialized)
 @MainActor
 struct DoseLogMigrationTests {
 
