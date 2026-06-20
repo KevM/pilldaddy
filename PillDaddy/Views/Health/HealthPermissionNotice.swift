@@ -37,6 +37,23 @@ struct HealthPermissionNotice: View {
     }
 
     private func openSettings() {
-        if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+        let newHealthURLString = "settings-navigation://com.apple.Settings.PrivacyAndSecurity/HEALTH"
+        let healthURLString = "App-Prefs:root=Privacy&path=HEALTH"
+        
+        if let newUrl = URL(string: newHealthURLString) {
+            UIApplication.shared.open(newUrl, options: [:]) { success in
+                if !success {
+                    if let oldUrl = URL(string: healthURLString) {
+                        UIApplication.shared.open(oldUrl, options: [:]) { successOld in
+                            if !successOld {
+                                if let fallbackUrl = URL(string: UIApplication.openSettingsURLString) {
+                                    UIApplication.shared.open(fallbackUrl)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }

@@ -69,6 +69,7 @@ struct PillDaddyApp: App {
                     }
                 }
                 .onChange(of: scenePhase) { _, phase in
+                    guard NSClassFromString("XCTestCase") == nil else { return }
                     if phase == .active {
                         syncReminders()
                         Task {
