@@ -109,5 +109,18 @@ struct MedicationLineageTests {
         let dose = try #require(events.first { $0.event.eventType == MedChangeType.doseChanged.rawValue })
         #expect(dose.isAnchor)
     }
+
+    @Test
+    func testScheduleChangedEventTitle() {
+        let med = Medication(name: "Metoprolol", strengthValue: 30, strengthUnit: "mg", dailyDoseTarget: 1.0)
+        context.insert(med)
+        context.insert(MedicationChangeEvent(
+            type: .scheduleChanged, reasoning: "",
+            oldValue: "Morning · 1 tablet", newValue: "Afternoon · 1 tablet", medication: med))
+        let events = MedicationLineage.events(from: med)
+        let item = events.first { $0.event.eventType == MedChangeType.scheduleChanged.rawValue }
+        #expect(item != nil)
+        #expect(MedicationLineage.title(for: item!) == "Schedule changed")
+    }
 }
 

@@ -9,6 +9,14 @@ enum DoseAllocationError: Error, Equatable {
     case exceedsDailyTarget
 }
 
+enum MembershipError: Error, Equatable {
+    case alreadyInBatch
+}
+
+enum BatchError: Error, Equatable {
+    case hasActiveMedications
+}
+
 /// Owns every multi-step medication mutation as a single atomic save, so the
 /// "caregiver can't get it wrong" guarantees live in one unit-testable place.
 @MainActor
@@ -90,10 +98,61 @@ enum MedicationService {
         _ med: Medication, _ batch: Batch, quantity: Double,
         in context: ModelContext
     ) throws {
+        let medID = med.persistentModelID
+        let duplicate = (batch.items ?? []).contains { $0.medication?.persistentModelID == medID }
+        if duplicate { throw MembershipError.alreadyInBatch }
+
         if DoseAllocation.isOverTarget(allocated: DoseAllocation.allocated(med) + quantity, target: med.dailyDoseTarget) {
             throw DoseAllocationError.exceedsDailyTarget
         }
-        context.insert(BatchItem(quantity: quantity, medication: med, batch: batch))
+        let item = BatchItem(quantity: quantity, medication: med, batch: batch)
+        context.insert(item)
+        context.insert(MedicationChangeEvent(
+            type: .scheduleChanged, reasoning: "",
+            oldValue: "", newValue: membershipDescription(item), medication: med))
+        try context.save()
+    }
+
+    /// Removes a medication's batch membership and records a `scheduleChanged`
+    /// event documenting what left. No reason required.
+    static func removeFromBatch(_ item: BatchItem, in context: ModelContext) throws {
+        let med = item.medication
+        let old = membershipDescription(item)
+        context.delete(item)
+        context.insert(MedicationChangeEvent(
+            type: .scheduleChanged, reasoning: "",
+            oldValue: old, newValue: "", medication: med))
+        try context.save()
+    }
+
+    /// Relocates a membership to another batch, preserving its quantity, and
+    /// records a `scheduleChanged` event. Because the quantity is relocated (not
+    /// added), total allocation is unchanged, so no cap check is needed. Throws
+    /// if the target batch already contains this medication.
+    static func moveToBatch(_ item: BatchItem, to batch: Batch, in context: ModelContext) throws {
+        let medID = item.medication?.persistentModelID
+        let duplicate = (batch.items ?? []).contains { $0.medication?.persistentModelID == medID }
+        if duplicate { throw MembershipError.alreadyInBatch }
+
+        let med = item.medication
+        let old = membershipDescription(item)
+        item.batch = batch
+        let new = membershipDescription(item)
+        context.insert(MedicationChangeEvent(
+            type: .scheduleChanged, reasoning: "",
+            oldValue: old, newValue: new, medication: med))
+        try context.save()
+    }
+
+    /// Hard-deletes a batch, allowed only when no active (non-PRN) medication is
+    /// a member. Remaining (discontinued-med) join rows cascade away; dose-log
+    /// snapshots survive intact.
+    static func deleteBatch(_ batch: Batch, in context: ModelContext) throws {
+        let hasActive = (batch.items ?? []).contains {
+            ($0.medication?.isActive ?? false) && !($0.medication?.isPRN ?? false)
+        }
+        if hasActive { throw BatchError.hasActiveMedications }
+        context.delete(batch)
         try context.save()
     }
 
@@ -185,6 +244,15 @@ enum MedicationService {
     }
 
      // MARK: - Internal helpers
+
+    /// Human-readable membership description frozen into schedule-change events,
+    /// e.g. "Morning · 1 tablet".
+    static func membershipDescription(_ item: BatchItem) -> String {
+        let batch = item.batch?.name ?? "?"
+        let form = item.medication?.form ?? ""
+        let desc = "\(batch) · \(DoseFormat.qty(item.quantity)) \(form)"
+        return desc.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 
     /// Human-readable summary of a med's current dose, deterministic (sorted by batch name).
     static func doseSummary(_ med: Medication) -> String {

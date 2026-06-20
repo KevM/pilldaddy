@@ -20,7 +20,7 @@ enum DoseStatus: String, CaseIterable, Identifiable {
 
 /// Type of medication lifecycle event. Stored on MedicationChangeEvent as a raw String.
 enum MedChangeType: String, CaseIterable, Identifiable {
-    case added, doseChanged, instructionsChanged, swapped, discontinued, reactivated, note
+    case added, doseChanged, instructionsChanged, scheduleChanged, swapped, discontinued, reactivated, note
     var id: String { rawValue }
 }
 

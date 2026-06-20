@@ -331,5 +331,158 @@ struct MedicationServiceTests {
                 reason: "", in: context)
         }
     }
+
+    @Test
+    func testAddToBatchWritesScheduleChangedEvent() throws {
+        let blue = Batch(name: "Morning")
+        context.insert(blue)
+        let med = Medication(name: "Metoprolol", strengthValue: 30, strengthUnit: "mg",
+                             dailyDoseTarget: 2.0, form: "tablet")
+        context.insert(med)
+        try context.save()
+
+        try MedicationService.addToBatch(med, blue, quantity: 1.0, in: context)
+
+        #expect(med.batchItems?.count == 1)
+        let event = try #require((med.changeEvents ?? []).first {
+            $0.eventType == MedChangeType.scheduleChanged.rawValue })
+        #expect(event.oldValue == "")
+        #expect(event.newValue == "Morning · 1 tablet")
+        #expect(event.reasoning == "")
+    }
+
+    @Test
+    func testAddToBatchStillEnforcesAllocationCap() throws {
+        let blue = Batch(name: "Morning")
+        context.insert(blue)
+        let med = Medication(name: "Metoprolol", strengthValue: 30, strengthUnit: "mg",
+                             dailyDoseTarget: 1.0, form: "tablet")
+        context.insert(med)
+        try context.save()
+
+        #expect(throws: DoseAllocationError.exceedsDailyTarget) {
+            try MedicationService.addToBatch(med, blue, quantity: 2.0, in: context)
+        }
+    }
+
+    @Test
+    func testRemoveFromBatchDeletesItemAndWritesEvent() throws {
+        let blue = Batch(name: "Morning")
+        context.insert(blue)
+        let med = Medication(name: "Metoprolol", strengthValue: 30, strengthUnit: "mg",
+                             dailyDoseTarget: 1.0, form: "tablet")
+        context.insert(med)
+        let item = BatchItem(quantity: 1.0, medication: med, batch: blue)
+        context.insert(item)
+        try context.save()
+
+        try MedicationService.removeFromBatch(item, in: context)
+
+        #expect(med.batchItems?.isEmpty == true)
+        let event = try #require((med.changeEvents ?? []).first {
+            $0.eventType == MedChangeType.scheduleChanged.rawValue })
+        #expect(event.oldValue == "Morning · 1 tablet")
+        #expect(event.newValue == "")
+    }
+
+    @Test
+    func testMoveToBatchPreservesQuantityAndWritesOldNewEvent() throws {
+        let morning = Batch(name: "Morning")
+        let afternoon = Batch(name: "Afternoon")
+        context.insert(morning); context.insert(afternoon)
+        let med = Medication(name: "Metoprolol", strengthValue: 30, strengthUnit: "mg",
+                             dailyDoseTarget: 2.0, form: "tablet")
+        context.insert(med)
+        let item = BatchItem(quantity: 1.5, medication: med, batch: morning)
+        context.insert(item)
+        try context.save()
+
+        try MedicationService.moveToBatch(item, to: afternoon, in: context)
+
+        #expect(item.batch?.name == "Afternoon")
+        #expect(item.quantity == 1.5)
+        #expect(DoseAllocation.allocated(med) == 1.5)
+        let event = try #require((med.changeEvents ?? []).first {
+            $0.eventType == MedChangeType.scheduleChanged.rawValue })
+        #expect(event.oldValue == "Morning · 1.5 tablet")
+        #expect(event.newValue == "Afternoon · 1.5 tablet")
+    }
+
+    @Test
+    func testMoveToBatchRejectsDuplicateMembership() throws {
+        let morning = Batch(name: "Morning")
+        let afternoon = Batch(name: "Afternoon")
+        context.insert(morning); context.insert(afternoon)
+        let med = Medication(name: "Metoprolol", strengthValue: 30, strengthUnit: "mg",
+                             dailyDoseTarget: 2.0, form: "tablet")
+        context.insert(med)
+        let inMorning = BatchItem(quantity: 1.0, medication: med, batch: morning)
+        let inAfternoon = BatchItem(quantity: 1.0, medication: med, batch: afternoon)
+        context.insert(inMorning); context.insert(inAfternoon)
+        try context.save()
+
+        #expect(throws: MembershipError.alreadyInBatch) {
+            try MedicationService.moveToBatch(inMorning, to: afternoon, in: context)
+        }
+    }
+
+    @Test
+    func testDeleteBatchThrowsWhenActiveMedicationPresent() throws {
+        let batch = Batch(name: "Morning")
+        context.insert(batch)
+        let med = Medication(name: "Metoprolol", strengthValue: 30, strengthUnit: "mg",
+                             dailyDoseTarget: 1.0, form: "tablet", isActive: true)
+        context.insert(med)
+        context.insert(BatchItem(quantity: 1.0, medication: med, batch: batch))
+        try context.save()
+
+        #expect(throws: BatchError.hasActiveMedications) {
+            try MedicationService.deleteBatch(batch, in: context)
+        }
+        #expect(try context.fetch(FetchDescriptor<Batch>()).count == 1)
+    }
+
+    @Test
+    func testDeleteBatchSucceedsWhenNoActiveMedsAndPreservesDoseLogSnapshots() throws {
+        let batch = Batch(name: "Morning", colorHex: "#3B82F6")
+        context.insert(batch)
+        let med = Medication(name: "Metoprolol", strengthValue: 30, strengthUnit: "mg",
+                             dailyDoseTarget: 1.0, form: "tablet", isActive: false)
+        context.insert(med)
+        let item = BatchItem(quantity: 1.0, medication: med, batch: batch)
+        context.insert(item)
+        let log = DoseLog(scheduledDate: .now, takenAt: .now, status: .taken, quantity: 1.0,
+                          snapshotMedName: "Metoprolol", snapshotStrength: "30 mg",
+                          snapshotStrengthValue: 30, snapshotStrengthUnit: "mg",
+                          snapshotBatchColorHex: "#3B82F6", medication: med, batchItem: item)
+        context.insert(log)
+        try context.save()
+
+        try MedicationService.deleteBatch(batch, in: context)
+
+        #expect(try context.fetch(FetchDescriptor<Batch>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<BatchItem>()).isEmpty)   // cascade removed the join row
+        let logs = try context.fetch(FetchDescriptor<DoseLog>())
+        #expect(logs.count == 1)
+        #expect(logs.first?.batchItem == nil)                              // link nullified
+        #expect(logs.first?.snapshotMedName == "Metoprolol")              // snapshot survives
+        #expect(logs.first?.snapshotBatchColorHex == "#3B82F6")
+    }
+
+    @Test
+    func testAddToBatchRejectsDuplicateMembership() throws {
+        let blue = Batch(name: "Blue")
+        context.insert(blue)
+        let med = Medication(name: "Metoprolol", strengthValue: 30, strengthUnit: "mg",
+                             dailyDoseTarget: 2.0, form: "tablet")
+        context.insert(med)
+        try context.save()
+
+        try MedicationService.addToBatch(med, blue, quantity: 1.0, in: context)
+
+        #expect(throws: MembershipError.alreadyInBatch) {
+            try MedicationService.addToBatch(med, blue, quantity: 1.0, in: context)
+        }
+    }
 }
 

@@ -50,6 +50,8 @@ struct PillDaddyApp: App {
             fatalError("Failed to initialize ModelContainer: \(error)")
         }
 
+        DoseLogMigration.backfillPRNFlag(in: container.mainContext)
+
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-seedTestData") {
             SeedData.seedIfEmpty(container.mainContext)

@@ -8,9 +8,11 @@ struct MedicationDetailView: View {
     @Environment(\.modelContext) private var context
 
     @State private var sheet: DetailSheet?
+    @State private var movingItem: BatchItem?
+    @State private var errorMessage: String?
 
     enum DetailSheet: Identifiable {
-        case edit, dose, instructions, swap, lifecycle
+        case edit, dose, instructions, swap, lifecycle, addToBatch
         var id: Int { hashValue }
     }
 
@@ -31,18 +33,32 @@ struct MedicationDetailView: View {
                 }
             }
 
-            if medication.isActive && !(medication.batchItems ?? []).isEmpty {
-                Section("Taken in") {
+            if medication.isActive && !medication.isPRN {
+                Section("Schedule") {
                     ForEach(medication.batchItems ?? []) { item in
-                        HStack {
-                            Circle().fill(Color(hex: item.batch?.colorHex ?? "#8E8E93"))
-                                .frame(width: 10, height: 10)
-                            Text(item.batch?.name ?? "—")
-                            Spacer()
-                            Text("\(DoseFormat.qty(item.quantity)) \(medication.form)")
-                                .foregroundStyle(.secondary)
+                        Menu {
+                            Button("Move to another batch…") { movingItem = item }
+                            Button("Remove from batch", role: .destructive) {
+                                do {
+                                    try MedicationService.removeFromBatch(item, in: context)
+                                } catch {
+                                    errorMessage = error.localizedDescription
+                                }
+                            }
+                        } label: {
+                            HStack {
+                                Circle().fill(Color(hex: item.batch?.colorHex ?? "#8E8E93"))
+                                    .frame(width: 10, height: 10)
+                                Text(item.batch?.name ?? "—")
+                                Spacer()
+                                Text("\(DoseFormat.qty(item.quantity)) \(medication.form)")
+                                    .foregroundStyle(.secondary)
+                            }
                         }
+                        .buttonStyle(.plain)
                     }
+                    Button("Add to batch…") { sheet = .addToBatch }
+                        .disabled(DoseAllocation.remaining(medication) <= 0)
                 }
             }
 
@@ -84,7 +100,19 @@ struct MedicationDetailView: View {
             case .instructions: ChangeInstructionsSheet(medication: medication)
             case .swap: SwapSheet(oldMed: medication)
             case .lifecycle: LifecycleReasonSheet(medication: medication, reactivating: !medication.isActive)
+            case .addToBatch: AddToBatchSheet(medication: medication)
             }
+        }
+        .sheet(item: $movingItem) { item in
+            MoveBatchSheet(item: item)
+        }
+        .alert("Error", isPresented: Binding(
+            get: { errorMessage != nil },
+            set: { if !$0 { errorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            if let errorMessage { Text(errorMessage) }
         }
     }
 }

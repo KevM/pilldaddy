@@ -91,11 +91,11 @@ struct DayQueryTests {
             name: "Tylenol", strengthValue: 500, strengthUnit: "mg", form: "tablet", isPRN: true, notes: "",
             placements: [], reason: "", in: context)
         context.insert(DoseLog(scheduledDate: .now, takenAt: .now, status: .taken,
-                               quantity: 1.0, medication: tylenol, batchItem: nil))
+                               quantity: 1.0, isPRN: true, medication: tylenol, batchItem: nil))
         // a log from a different day must not appear
         let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: .now)!
         context.insert(DoseLog(scheduledDate: yesterday, takenAt: yesterday, status: .taken,
-                               quantity: 1.0, medication: tylenol, batchItem: nil))
+                               quantity: 1.0, isPRN: true, medication: tylenol, batchItem: nil))
         try context.save()
 
         let meds = try context.fetch(FetchDescriptor<Medication>(
@@ -121,6 +121,38 @@ struct DayQueryTests {
         #expect(comps.hour == 18)
         #expect(comps.minute == 25)
         #expect(comps.second == 30)
+    }
+
+    @Test
+    func testPrnDosesUsesIsPRNFlagNotBatchItemLink() throws {
+        let container = try ModelTestSupport.makeContainer()
+        let context = container.mainContext
+
+        // A scheduled (non-PRN) log whose batchItem link has been nullified must NOT
+        // be classified as PRN.
+        let scheduled = Medication(name: "Metoprolol", strengthValue: 30, strengthUnit: "mg",
+                                   form: "tablet", isPRN: false)
+        context.insert(scheduled)
+        let orphanLog = DoseLog(scheduledDate: .now, status: .taken,
+                                medication: scheduled, batchItem: nil)
+        orphanLog.isPRN = false
+        context.insert(orphanLog)
+
+        // A genuine PRN log.
+        let tylenol = Medication(name: "Tylenol", strengthValue: 500, strengthUnit: "mg",
+                                 form: "tablet", isPRN: true)
+        context.insert(tylenol)
+        let prnLog = DoseLog(scheduledDate: .now, status: .taken,
+                             medication: tylenol, batchItem: nil)
+        prnLog.isPRN = true
+        context.insert(prnLog)
+        try context.save()
+
+        let prnMeds = try context.fetch(FetchDescriptor<Medication>(
+            predicate: #Predicate { $0.isActive && $0.isPRN }))
+        let result = DayQuery.prnDoses(from: prnMeds, on: .now)
+        let totalLogs = result.reduce(0) { $0 + $1.logs.count }
+        #expect(totalLogs == 1)                       // only the genuine PRN log
     }
 }
 

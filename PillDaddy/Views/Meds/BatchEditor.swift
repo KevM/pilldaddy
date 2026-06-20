@@ -27,6 +27,7 @@ struct BatchEditor: View {
     @State private var addQuantity = 1.0
     @State private var editingMed: Medication?
     @State private var errorMessage: String?
+    @State private var confirmingDelete = false
 
     var body: some View {
         NavigationStack {
@@ -63,8 +64,13 @@ struct BatchEditor: View {
                             .buttonStyle(.plain)
                         }
                         .onDelete { offsets in
-                            for index in offsets { context.delete(activeItems[index]) }
-                            try? context.save()
+                            for index in offsets {
+                                do {
+                                    try MedicationService.removeFromBatch(activeItems[index], in: context)
+                                } catch {
+                                    errorMessage = error.localizedDescription
+                                }
+                            }
                         }
                         Menu("Add medication") {
                             ForEach(addableMeds(to: batch)) { med in
@@ -74,6 +80,14 @@ struct BatchEditor: View {
                                 }
                                 .disabled(DoseAllocation.remaining(med) <= 0)
                             }
+                        }
+                    }
+                    Section {
+                        Button("Delete batch", role: .destructive) { confirmingDelete = true }
+                            .disabled(!activeItems.isEmpty)
+                        if !activeItems.isEmpty {
+                            Text("Remove the \(activeItems.count) active medication(s) before deleting.")
+                                .font(.caption).foregroundStyle(.secondary)
                         }
                     }
                 }
@@ -131,6 +145,31 @@ struct BatchEditor: View {
             }
             .sheet(item: $editingMed) { med in
                 ChangeDoseSheet(medication: med)
+            }
+            .alert("Error", isPresented: Binding(
+                get: { errorMessage != nil && addingMed == nil },
+                set: { if !$0 { errorMessage = nil } }
+            )) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                if let errorMessage {
+                    Text(errorMessage)
+                }
+            }
+            .alert("Delete this batch?", isPresented: $confirmingDelete) {
+                Button("Delete", role: .destructive) {
+                    if let batch {
+                        do {
+                            try MedicationService.deleteBatch(batch, in: context)
+                            dismiss()
+                        } catch {
+                            errorMessage = error.localizedDescription
+                        }
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This can't be undone.")
             }
         }
     }

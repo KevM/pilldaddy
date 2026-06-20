@@ -74,6 +74,7 @@ enum MedicationLineage {
         case .added: return "Added"
         case .doseChanged: return "Dose changed"
         case .instructionsChanged: return "Instructions changed"
+        case .scheduleChanged: return "Schedule changed"
         case .swapped:
             if let name = item.successorName { return "Swapped to \(name)" }
             return "Swapped"
