@@ -20,7 +20,7 @@ not a new screen), keeping all metrics in a single session.
 | Capture surfaces | **Two:** generic *Scalar* + specialized *Vitals* | Five values, but only two capture experiences. |
 | HealthKit sync | **One-way write only**, fire-and-forget | Two-way sync explicitly out of scope (per README/roadmap). |
 | Editing | **Add / view / delete**, no edit | Delete + re-add covers correction. YAGNI. |
-| Units | **US customary** (Weight = lb, Water = fl oz) | BP = mmHg, Pulse = bpm, SpO₂ = % are fixed. HealthKit stores canonical units and converts. |
+| Units | **US customary** (Weight = lb, Water = fl oz) | BP = mmHg, Pulse = bpm, SpO₂ = % are fixed. HealthKit stores canonical units and converts. Units are a **single seam** (see Localization readiness) so switching to metric later is contained. |
 | Location | Existing **Health** tab (Session 0 stub, tag 3) | No new tab; replaces the "Coming soon" placeholder. |
 
 ## Architecture
@@ -73,6 +73,14 @@ struct MetricDefinition {
 Adding a future scalar metric = one registry entry, no new screens. This is the "engine" that
 makes breadth cheap. Genuinely novel shapes (e.g. Sleep Quality later) get a new
 `captureGroup` + form without touching the generic core.
+
+**Localization readiness.** Units appear in exactly one place — the `MetricDefinition` — and
+all entry/display goes through a single formatting helper keyed off the definition (e.g.
+`MetricFormatter`). No view hard-codes "lb"/"fl oz". Each `HealthMetric` row also stores its
+`unit`, so rows are self-describing. Switching the app to metric (or per-locale units) later is
+therefore a contained change — swap the definition's display unit and add conversion in the
+formatter — with no data migration, since HealthKit already holds canonical values and historic
+rows carry their own `unit`. We ship US customary now; we do not build runtime unit selection.
 
 ### 2. Capture UI (Health tab)
 
