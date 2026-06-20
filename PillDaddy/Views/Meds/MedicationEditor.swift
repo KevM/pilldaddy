@@ -87,6 +87,8 @@ struct MedicationEditor: View {
                 HStack {
                     Circle().fill(Color(hex: batch.colorHex)).frame(width: 12, height: 12)
                     Text(batch.name.isEmpty ? "Batch" : batch.name)
+                    Text(batch.timeOfDay, style: .time)
+                        .foregroundStyle(.secondary)
                 }
             }
             if isOn {
