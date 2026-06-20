@@ -124,4 +124,3 @@ struct TodayView: View {
         .modelContainer(PreviewSupport.seededContainer())
 }
 #endif
-

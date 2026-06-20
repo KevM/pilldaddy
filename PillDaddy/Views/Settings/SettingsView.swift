@@ -35,8 +35,8 @@ struct SettingsView: View {
 
             }
             .navigationTitle("Settings")
-            .disabled(false)
             .onChange(of: settings.remindersEnabled) { _, _ in sync() }
+
             .onChange(of: settings.headsUpEnabled) { _, _ in sync() }
             .onChange(of: settings.graceMinutes) { _, _ in sync() }
             .task { await loadAuthStatus() }
