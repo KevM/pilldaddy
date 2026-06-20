@@ -28,6 +28,9 @@ targets:
     settings:
       base:
         CODE_SIGN_ENTITLEMENTS: PillDaddy/PillDaddy.entitlements
+    dependencies:
+      - target: PillDaddyWidgets
+        embed: true
   PillDaddyTests:
     type: bundle.unit-test
     platform: iOS
@@ -39,14 +42,32 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
     dependencies:
       - target: PillDaddy
+  PillDaddyWidgets:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - PillDaddyWidgets
+      - path: PillDaddy/Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.pilldaddy.PillDaddy.widgets
+    info:
+      path: PillDaddyWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: PillDaddy Reminders
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
 schemes:
   PillDaddy:
     build:
       targets:
         PillDaddy: all
         PillDaddyTests: [test]
+        PillDaddyWidgets: all
     run:
-      debugEnabled: true
+      debugEnabled: false
     test:
       targets:
         - PillDaddyTests
+
