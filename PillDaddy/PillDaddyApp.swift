@@ -36,6 +36,7 @@ struct PillDaddyApp: App {
 
     let container: ModelContainer
     private let settings = ReminderSettings()
+    private let healthWriter: HealthKitWriting = LiveHealthKitWriter()
 
     init() {
         do {
@@ -68,7 +69,12 @@ struct PillDaddyApp: App {
                     }
                 }
                 .onChange(of: scenePhase) { _, phase in
-                    if phase == .active { syncReminders() }
+                    if phase == .active {
+                        syncReminders()
+                        Task {
+                            await HealthMetricService.resyncPending(writer: healthWriter, in: container.mainContext)
+                        }
+                    }
                 }
         }
         .modelContainer(container)
