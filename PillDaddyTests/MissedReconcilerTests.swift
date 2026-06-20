@@ -26,8 +26,8 @@ final class MissedReconcilerTests: XCTestCase {
         let t = cal.date(bySettingHour: hour, minute: 0, second: 0, of: .now)!
         let batch = Batch(name: "B\(hour)", timeOfDay: t,
                           recurrenceKind: recurrence, weekdays: weekdays)
-        batch.uuid = UUID()
         context.insert(batch)
+
         let med = Medication(name: "Med\(hour)")
         context.insert(med)
         let item = BatchItem(quantity: 1.0, medication: med, batch: batch)

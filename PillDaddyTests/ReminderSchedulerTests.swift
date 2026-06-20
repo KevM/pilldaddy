@@ -26,8 +26,8 @@ final class ReminderSchedulerTests: XCTestCase {
         let t = cal.date(bySettingHour: hour, minute: minute, second: 0, of: .now)!
         let batch = Batch(name: "B\(hour)", timeOfDay: t,
                           recurrenceKind: recurrence, weekdays: weekdays)
-         batch.uuid = UUID() // ensure uuid is set
         context.insert(batch)
+
         let med = Medication(name: "Med\(hour)")
         context.insert(med)
         context.insert(BatchItem(quantity: 1.0, medication: med, batch: batch))
