@@ -30,6 +30,8 @@ struct AddNoteSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
+                        // Safe to use `try?` because `canSave` validates that the text is non-empty,
+                        // making the `reasonRequired` error unreachable.
                         try? MedicationService.addNote(medication, text: text, in: context)
                         dismiss()
                     }

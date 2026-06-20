@@ -53,11 +53,9 @@ struct MedicationDetailView: View {
                     ForEach(events.prefix(5)) { item in
                         TimelineEventRow(item: item)
                     }
-                    if events.count > 5 {
-                        NavigationLink("See full history") {
-                            MedicationTimelineView(anchor: medication)
-                        }
-                    }
+                }
+                NavigationLink("Full history & notes") {
+                    MedicationTimelineView(anchor: medication)
                 }
             }
 
