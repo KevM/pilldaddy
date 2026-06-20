@@ -12,7 +12,7 @@ struct MainTabView: View {
                 .tabItem { Label("Meds", systemImage: "pills") }.tag(1)
             PlaceholderTab(title: "Reports", systemImage: "chart.bar")
                 .tabItem { Label("Reports", systemImage: "chart.bar") }.tag(2)
-            PlaceholderTab(title: "Health", systemImage: "heart")
+            HealthView()
                 .tabItem { Label("Health", systemImage: "heart") }.tag(3)
             SettingsView()
                 .tabItem { Label("Settings", systemImage: "gear") }.tag(4)
