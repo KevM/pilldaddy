@@ -9,7 +9,8 @@ struct SwapSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var name = ""
-    @State private var strength = ""
+    @State private var strengthValue = 0.0
+    @State private var strengthUnit = "mg"
     @State private var form = "tablet"
     @State private var inheritSchedule = true
     @State private var reason = ""
@@ -23,7 +24,12 @@ struct SwapSheet: View {
             Form {
                 Section("Replacement drug") {
                     TextField("Name", text: $name)
-                    TextField("Strength", text: $strength)
+                    HStack {
+                        TextField("Strength", value: $strengthValue, format: .number)
+                            .keyboardType(.decimalPad)
+                        TextField("Unit", text: $strengthUnit)
+                            .frame(maxWidth: 80)
+                    }
                     TextField("Form", text: $form)
                 }
                 Section("Schedule") {
@@ -56,7 +62,7 @@ struct SwapSheet: View {
 
     private func save() {
         _ = try? MedicationService.swap(
-            oldMed, newName: name, newStrength: strength, newForm: form,
+            oldMed, newName: name, newStrengthValue: strengthValue, newStrengthUnit: strengthUnit, newForm: form,
             inheritSchedule: inheritSchedule, reason: reason, in: context)
         dismiss()
     }

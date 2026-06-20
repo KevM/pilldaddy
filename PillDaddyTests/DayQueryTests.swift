@@ -44,12 +44,12 @@ struct DayQueryTests {
         let empty = Batch(name: "Empty", sortOrder: 1)
         context.insert(blue); context.insert(empty)
 
-        let active = MedicationService.addMedication(
-            name: "Active", strength: "10mg", form: "tablet", isPRN: false, notes: "",
+        let active = try MedicationService.addMedication(
+            name: "Active", strengthValue: 10, strengthUnit: "mg", form: "tablet", isPRN: false, notes: "",
             placements: [(batch: blue, quantity: 1.0)], reason: "", in: context)
         _ = active
-        let stopped = MedicationService.addMedication(
-            name: "Stopped", strength: "10mg", form: "tablet", isPRN: false, notes: "",
+        let stopped = try MedicationService.addMedication(
+            name: "Stopped", strengthValue: 10, strengthUnit: "mg", form: "tablet", isPRN: false, notes: "",
             placements: [(batch: blue, quantity: 1.0)], reason: "", in: context)
         try MedicationService.discontinue(stopped, reason: "x", in: context)
 
@@ -64,11 +64,11 @@ struct DayQueryTests {
     func testBatchDayStateReflectsExistingLogs() throws {
         let blue = Batch(name: "Blue", timeOfDay: .now, sortOrder: 0)
         context.insert(blue)
-        let med = MedicationService.addMedication(
-            name: "A", strength: "1mg", form: "tablet", isPRN: false, notes: "",
+        let med = try MedicationService.addMedication(
+            name: "A", strengthValue: 1, strengthUnit: "mg", form: "tablet", isPRN: false, notes: "",
             placements: [(batch: blue, quantity: 1.0)], reason: "", in: context)
-        let med2 = MedicationService.addMedication(
-            name: "B", strength: "1mg", form: "tablet", isPRN: false, notes: "",
+        let med2 = try MedicationService.addMedication(
+            name: "B", strengthValue: 1, strengthUnit: "mg", form: "tablet", isPRN: false, notes: "",
             placements: [(batch: blue, quantity: 1.0)], reason: "", in: context)
         _ = (med, med2)
 
@@ -87,8 +87,8 @@ struct DayQueryTests {
 
     @Test
     func testPRNDosesReturnActivePRNWithThatDaysLogs() throws {
-        let tylenol = MedicationService.addMedication(
-            name: "Tylenol", strength: "500mg", form: "tablet", isPRN: true, notes: "",
+        let tylenol = try MedicationService.addMedication(
+            name: "Tylenol", strengthValue: 500, strengthUnit: "mg", form: "tablet", isPRN: true, notes: "",
             placements: [], reason: "", in: context)
         context.insert(DoseLog(scheduledDate: .now, takenAt: .now, status: .taken,
                                quantity: 1.0, medication: tylenol, batchItem: nil))

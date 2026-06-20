@@ -18,7 +18,7 @@ struct DoseLogServicePRNTests {
 
     @Test
     func testLogPRNCreatesBatchItemNilRowAndIsRepeatable() throws {
-        let med = Medication(name: "Acetaminophen", strength: "500mg", isPRN: true)
+        let med = Medication(name: "Acetaminophen", strengthValue: 500, strengthUnit: "mg", dailyDoseTarget: 1.0, isPRN: true)
         context.insert(med)
         DoseLogService.logPRN(med, takenAt: .now, quantity: 2.0, note: "headache", in: context)
         DoseLogService.logPRN(med, takenAt: .now, quantity: 1.0, note: "", in: context)
@@ -32,7 +32,7 @@ struct DoseLogServicePRNTests {
 
     @Test
     func testDeletePRNLogRemovesExactlyOne() throws {
-        let med = Medication(name: "Acetaminophen", strength: "500mg", isPRN: true)
+        let med = Medication(name: "Acetaminophen", strengthValue: 500, strengthUnit: "mg", dailyDoseTarget: 1.0, isPRN: true)
         context.insert(med)
         let first = DoseLogService.logPRN(med, takenAt: .now, quantity: 1.0, note: "", in: context)
         DoseLogService.logPRN(med, takenAt: .now, quantity: 1.0, note: "", in: context)

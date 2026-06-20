@@ -22,8 +22,8 @@ struct DoseLogServiceTests {
     }
 
     private func addMed(_ name: String, qty: Double) -> BatchItem {
-        let med = MedicationService.addMedication(
-            name: name, strength: "10mg", form: "tablet", isPRN: false, notes: "",
+        let med = try! MedicationService.addMedication(
+            name: name, strengthValue: 10, strengthUnit: "mg", form: "tablet", isPRN: false, notes: "",
             placements: [(batch: blue, quantity: qty)], reason: "", in: context)
         return (med.batchItems ?? []).first!
     }
@@ -42,7 +42,7 @@ struct DoseLogServiceTests {
         let aLog = try #require(all.first { $0.snapshotMedName == "A" })
         #expect(aLog.status == DoseStatus.taken.rawValue)
         #expect(aLog.quantity == 0.5)
-        #expect(aLog.snapshotStrength == "10mg")
+        #expect(aLog.snapshotStrength == "10 mg")
         #expect(aLog.snapshotBatchColorHex == "#3B82F6")
         #expect(aLog.takenAt == at)
     }

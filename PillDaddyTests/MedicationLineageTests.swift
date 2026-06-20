@@ -16,9 +16,9 @@ struct MedicationLineageTests {
 
     /// Builds A → B → C and returns the three meds in chain order.
     private func makeChain() -> (a: Medication, b: Medication, c: Medication) {
-        let a = Medication(name: "Atenolol", strength: "25mg")
-        let b = Medication(name: "Metoprolol", strength: "30mg")
-        let c = Medication(name: "Bisoprolol", strength: "5mg")
+        let a = Medication(name: "Atenolol", strengthValue: 25, strengthUnit: "mg", dailyDoseTarget: 1.0)
+        let b = Medication(name: "Metoprolol", strengthValue: 30, strengthUnit: "mg", dailyDoseTarget: 1.0)
+        let c = Medication(name: "Bisoprolol", strengthValue: 5, strengthUnit: "mg", dailyDoseTarget: 1.0)
         context.insert(a); context.insert(b); context.insert(c)
         a.successor = b
         b.successor = c
@@ -41,15 +41,15 @@ struct MedicationLineageTests {
 
     @Test
     func testOrderedForSingleMedIsJustItself() {
-        let med = Medication(name: "Vitamin D", strength: "1000 IU")
+        let med = Medication(name: "Vitamin D", strengthValue: 1000, strengthUnit: "IU", dailyDoseTarget: 1.0)
         context.insert(med)
         #expect(MedicationLineage.ordered(from: med).map(\.name) == ["Vitamin D"])
     }
 
     @Test
     func testOrderedTerminatesOnCycle() {
-        let a = Medication(name: "A", strength: "1")
-        let b = Medication(name: "B", strength: "1")
+        let a = Medication(name: "A", strengthValue: 1, strengthUnit: "", dailyDoseTarget: 1.0)
+        let b = Medication(name: "B", strengthValue: 1, strengthUnit: "", dailyDoseTarget: 1.0)
         context.insert(a); context.insert(b)
         a.successor = b
         b.successor = a   // malformed cycle

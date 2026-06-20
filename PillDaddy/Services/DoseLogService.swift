@@ -59,7 +59,6 @@ enum DoseLogService {
 
     // MARK: - PRN
 
-
     /// Records a new ad-hoc PRN dose (never upserted — each is its own dose).
     @discardableResult
     static func logPRN(
@@ -69,7 +68,8 @@ enum DoseLogService {
         let log = DoseLog(
             scheduledDate: takenAt, takenAt: takenAt, status: .taken,
             quantity: quantity, notes: note,
-            snapshotMedName: med.name, snapshotStrength: med.strength,
+            snapshotMedName: med.name, snapshotStrength: med.strengthDescription,
+            snapshotStrengthValue: med.strengthValue, snapshotStrengthUnit: med.strengthUnit,
             snapshotBatchColorHex: "", medication: med, batchItem: nil)
         context.insert(log)
         try? context.save()
@@ -104,7 +104,9 @@ enum DoseLogService {
         log.quantity = item.quantity
         log.notes = note
         log.snapshotMedName = item.medication?.name ?? ""
-        log.snapshotStrength = item.medication?.strength ?? ""
+        log.snapshotStrength = item.medication?.strengthDescription ?? ""
+        log.snapshotStrengthValue = item.medication?.strengthValue ?? 0
+        log.snapshotStrengthUnit = item.medication?.strengthUnit ?? "mg"
         log.snapshotBatchColorHex = item.batch?.colorHex ?? ""
         return log
     }

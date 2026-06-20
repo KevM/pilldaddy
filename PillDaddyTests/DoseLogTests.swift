@@ -10,14 +10,14 @@ struct DoseLogTests {
         let container = try ModelTestSupport.makeContainer()
         let context = container.mainContext
 
-        let med = Medication(name: "Metoprolol", strength: "30mg")
+        let med = Medication(name: "Metoprolol", strengthValue: 30, strengthUnit: "mg", dailyDoseTarget: 1.0)
         let batch = Batch(name: "Blue", colorHex: "#3B82F6")
         let item = BatchItem(quantity: 1.0, medication: med, batch: batch)
         context.insert(med); context.insert(batch); context.insert(item)
 
         let log = DoseLog(
             scheduledDate: .now, status: .taken, quantity: 1.0,
-            snapshotMedName: "Metoprolol", snapshotStrength: "30mg",
+            snapshotMedName: "Metoprolol", snapshotStrength: "30 mg",
             snapshotBatchColorHex: "#3B82F6", medication: med, batchItem: item)
         context.insert(log)
         try context.save()
@@ -35,7 +35,7 @@ struct DoseLogTests {
         let container = try ModelTestSupport.makeContainer()
         let context = container.mainContext
 
-        let prn = Medication(name: "Acetaminophen", strength: "500mg", isPRN: true)
+        let prn = Medication(name: "Acetaminophen", strengthValue: 500, strengthUnit: "mg", dailyDoseTarget: 1.0, isPRN: true)
         context.insert(prn)
         let log = DoseLog(status: .taken, quantity: 2.0,
                           snapshotMedName: "Acetaminophen", medication: prn, batchItem: nil)

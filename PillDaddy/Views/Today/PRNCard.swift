@@ -34,7 +34,7 @@ struct PRNCard: View {
                         HStack {
                             VStack(alignment: .leading) {
                                 Text(dose.med.name)
-                                Text(dose.med.strength).font(.caption).foregroundStyle(.secondary)
+                                Text(dose.med.strengthDescription).font(.caption).foregroundStyle(.secondary)
                             }
                             Spacer()
                             Button("Log a dose") { loggingMed = dose.med }

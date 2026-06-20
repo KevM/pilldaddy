@@ -10,7 +10,7 @@ struct BatchRelationshipTests {
         let container = try ModelTestSupport.makeContainer()
         let context = container.mainContext
 
-        let metoprolol = Medication(name: "Metoprolol", strength: "30mg")
+        let metoprolol = Medication(name: "Metoprolol", strengthValue: 30, strengthUnit: "mg", dailyDoseTarget: 1.5)
         let blue = Batch(name: "Blue", colorHex: "#3B82F6")
         let green = Batch(name: "Green", colorHex: "#10B981")
         context.insert(metoprolol)

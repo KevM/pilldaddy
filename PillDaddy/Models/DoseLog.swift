@@ -12,6 +12,8 @@ final class DoseLog {
     // snapshot fields, frozen at log time
     var snapshotMedName: String = ""
     var snapshotStrength: String = ""
+    var snapshotStrengthValue: Double = 0
+    var snapshotStrengthUnit: String = "mg"
     var snapshotBatchColorHex: String = ""
 
     var medication: Medication? = nil
@@ -20,6 +22,7 @@ final class DoseLog {
     init(scheduledDate: Date = .now, takenAt: Date? = nil, status: DoseStatus = .taken,
          quantity: Double = 1.0, notes: String = "",
          snapshotMedName: String = "", snapshotStrength: String = "",
+         snapshotStrengthValue: Double = 0, snapshotStrengthUnit: String = "mg",
          snapshotBatchColorHex: String = "",
          medication: Medication? = nil, batchItem: BatchItem? = nil) {
         self.scheduledDate = scheduledDate
@@ -29,6 +32,8 @@ final class DoseLog {
         self.notes = notes
         self.snapshotMedName = snapshotMedName
         self.snapshotStrength = snapshotStrength
+        self.snapshotStrengthValue = snapshotStrengthValue
+        self.snapshotStrengthUnit = snapshotStrengthUnit
         self.snapshotBatchColorHex = snapshotBatchColorHex
         self.medication = medication
         self.batchItem = batchItem

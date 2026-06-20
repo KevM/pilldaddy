@@ -9,7 +9,7 @@ struct MedicationModelTests {
         let container = try ModelTestSupport.makeContainer()
         let context = container.mainContext
 
-        let med = Medication(name: "Metoprolol", strength: "30mg")
+        let med = Medication(name: "Metoprolol", strengthValue: 30, strengthUnit: "mg", dailyDoseTarget: 1.0)
         context.insert(med)
         try context.save()
 
@@ -17,7 +17,7 @@ struct MedicationModelTests {
         #expect(fetched.count == 1)
         let only = try #require(fetched.first)
         #expect(only.name == "Metoprolol")
-        #expect(only.strength == "30mg")
+        #expect(only.strengthDescription == "30 mg")
         #expect(only.form == "tablet")
         #expect(only.isActive)
         #expect(!only.isPRN)

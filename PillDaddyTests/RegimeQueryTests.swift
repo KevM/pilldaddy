@@ -18,14 +18,14 @@ struct RegimeQueryTests {
         let blue = Batch(name: "Blue", sortOrder: 0)
         context.insert(blue)
 
-        let active = MedicationService.addMedication(
-            name: "Active", strength: "10mg", form: "tablet",
+        let active = try MedicationService.addMedication(
+            name: "Active", strengthValue: 10, strengthUnit: "mg", form: "tablet",
             isPRN: false, notes: "",
             placements: [(batch: blue, quantity: 1.0)], reason: "", in: context)
         _ = active
 
-        let discontinued = MedicationService.addMedication(
-            name: "Stopped", strength: "10mg", form: "tablet",
+        let discontinued = try MedicationService.addMedication(
+            name: "Stopped", strengthValue: 10, strengthUnit: "mg", form: "tablet",
             isPRN: false, notes: "",
             placements: [(batch: blue, quantity: 1.0)], reason: "", in: context)
         try MedicationService.discontinue(discontinued, reason: "stop", in: context)
@@ -38,11 +38,11 @@ struct RegimeQueryTests {
 
     @Test
     func testActivePRNMedsReturnsOnlyActivePRN() throws {
-        _ = MedicationService.addMedication(
-            name: "Tylenol", strength: "500mg", form: "tablet",
+        _ = try MedicationService.addMedication(
+            name: "Tylenol", strengthValue: 500, strengthUnit: "mg", form: "tablet",
             isPRN: true, notes: "", placements: [], reason: "", in: context)
-        let scheduled = MedicationService.addMedication(
-            name: "Scheduled", strength: "1mg", form: "tablet",
+        let scheduled = try MedicationService.addMedication(
+            name: "Scheduled", strengthValue: 1, strengthUnit: "mg", form: "tablet",
             isPRN: false, notes: "", placements: [], reason: "", in: context)
         _ = scheduled
 

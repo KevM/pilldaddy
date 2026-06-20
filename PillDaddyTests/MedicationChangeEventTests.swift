@@ -10,7 +10,7 @@ struct MedicationChangeEventTests {
         let container = try ModelTestSupport.makeContainer()
         let context = container.mainContext
 
-        let med = Medication(name: "Metoprolol", strength: "30mg")
+        let med = Medication(name: "Metoprolol", strengthValue: 30, strengthUnit: "mg", dailyDoseTarget: 1.0)
         context.insert(med)
         let event = MedicationChangeEvent(
             type: .doseChanged, reasoning: "Lowered for low BP",
@@ -30,8 +30,8 @@ struct MedicationChangeEventTests {
         let container = try ModelTestSupport.makeContainer()
         let context = container.mainContext
 
-        let atenolol = Medication(name: "Atenolol", strength: "50mg")
-        let metoprolol = Medication(name: "Metoprolol", strength: "30mg")
+        let atenolol = Medication(name: "Atenolol", strengthValue: 50, strengthUnit: "mg", dailyDoseTarget: 1.0)
+        let metoprolol = Medication(name: "Metoprolol", strengthValue: 30, strengthUnit: "mg", dailyDoseTarget: 1.0)
         context.insert(atenolol); context.insert(metoprolol)
 
         // perform a swap: discontinue old, link successor

@@ -28,8 +28,8 @@ enum SeedData {
         context.insert(dawn)
 
         // Scheduled meds
-        let metoprolol = Medication(name: "Metoprolol", strength: "30mg")
-        let vitaminD = Medication(name: "Vitamin D", strength: "1000 IU", form: "capsule")
+        let metoprolol = Medication(name: "Metoprolol", strengthValue: 30, strengthUnit: "mg", dailyDoseTarget: 1.5)
+        let vitaminD = Medication(name: "Vitamin D", strengthValue: 1000, strengthUnit: "IU", dailyDoseTarget: 2.0, form: "capsule")
         context.insert(metoprolol)
         context.insert(vitaminD)
         let metoprololBlue = BatchItem(quantity: 1.0, medication: metoprolol, batch: blue)
@@ -40,7 +40,7 @@ enum SeedData {
         context.insert(BatchItem(quantity: 1.0, medication: vitaminD, batch: dawn))
 
         // PRN med
-        let acetaminophen = Medication(name: "Acetaminophen", strength: "500mg", isPRN: true)
+        let acetaminophen = Medication(name: "Acetaminophen", strengthValue: 500, strengthUnit: "mg", dailyDoseTarget: 1.0, isPRN: true)
         context.insert(acetaminophen)
 
         // Continuity chain: Atenolol was the original beta blocker, swapped out
@@ -50,7 +50,7 @@ enum SeedData {
             cal.date(byAdding: .day, value: -days, to: .now) ?? .now
         }
 
-        let atenolol = Medication(name: "Atenolol", strength: "25mg",
+        let atenolol = Medication(name: "Atenolol", strengthValue: 25, strengthUnit: "mg", dailyDoseTarget: 1.0,
                                   isActive: false, discontinuedAt: daysAgo(100))
         context.insert(atenolol)
         atenolol.successor = metoprolol   // links predecessor on Metoprolol too
@@ -62,7 +62,7 @@ enum SeedData {
         context.insert(MedicationChangeEvent(
             timestamp: daysAgo(100), type: .swapped,
             reasoning: "Persistent cold hands; switched to a more selective blocker",
-            oldValue: "Atenolol 25mg", newValue: "Metoprolol 30mg",
+            oldValue: "Atenolol 25 mg", newValue: "Metoprolol 30 mg",
             medication: atenolol))
         context.insert(MedicationChangeEvent(
             timestamp: daysAgo(30), type: .doseChanged,
@@ -78,17 +78,17 @@ enum SeedData {
         let blueSlot = DayQuery.slotDate(for: blue, on: .now)
         context.insert(DoseLog(
             scheduledDate: blueSlot, takenAt: time(9, 5), status: .taken, quantity: 1.0,
-            snapshotMedName: metoprolol.name, snapshotStrength: metoprolol.strength,
+            snapshotMedName: metoprolol.name, snapshotStrength: metoprolol.strengthDescription,
             snapshotBatchColorHex: blue.colorHex,
             medication: metoprolol, batchItem: metoprololBlue))
         context.insert(DoseLog(
             scheduledDate: blueSlot, status: .skipped, quantity: 1.0, notes: "Held — low appetite",
-            snapshotMedName: vitaminD.name, snapshotStrength: vitaminD.strength,
+            snapshotMedName: vitaminD.name, snapshotStrength: vitaminD.strengthDescription,
             snapshotBatchColorHex: blue.colorHex,
             medication: vitaminD, batchItem: vitaminDBlue))
         context.insert(DoseLog(
             scheduledDate: time(14, 30), takenAt: time(14, 30), status: .taken, quantity: 1.0,
-            snapshotMedName: acetaminophen.name, snapshotStrength: acetaminophen.strength,
+            snapshotMedName: acetaminophen.name, snapshotStrength: acetaminophen.strengthDescription,
             medication: acetaminophen, batchItem: nil))
 
         // Health metrics — a few recent readings so the Health tab is exercisable.

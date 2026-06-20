@@ -5,6 +5,10 @@ enum MedicationServiceError: Error, Equatable {
     case reasonRequired
 }
 
+enum DoseAllocationError: Error, Equatable {
+    case exceedsDailyTarget
+}
+
 /// Owns every multi-step medication mutation as a single atomic save, so the
 /// "caregiver can't get it wrong" guarantees live in one unit-testable place.
 @MainActor
@@ -14,13 +18,20 @@ enum MedicationService {
     /// `added` change event. Reason is optional on add.
     @discardableResult
     static func addMedication(
-        name: String, strength: String, form: String,
-        isPRN: Bool, notes: String,
+        name: String, strengthValue: Double, strengthUnit: String, form: String,
+        isPRN: Bool, notes: String, dailyDoseTarget: Double = 1,
         placements: [(batch: Batch, quantity: Double)],
         reason: String,
         in context: ModelContext
-    ) -> Medication {
-        let med = Medication(name: name, strength: strength, form: form,
+    ) throws -> Medication {
+        if !isPRN {
+            let total = placements.reduce(0) { $0 + $1.quantity }
+            if DoseAllocation.isOverTarget(allocated: total, target: dailyDoseTarget) {
+                throw DoseAllocationError.exceedsDailyTarget
+            }
+        }
+        let med = Medication(name: name, strengthValue: strengthValue, strengthUnit: strengthUnit,
+                             dailyDoseTarget: dailyDoseTarget, form: form,
                              generalNotes: notes, isPRN: isPRN)
         context.insert(med)
 
@@ -32,7 +43,7 @@ enum MedicationService {
         }
 
         context.insert(MedicationChangeEvent(type: .added, reasoning: reason, medication: med))
-        try? context.save()
+        try context.save()
         return med
     }
 
@@ -40,14 +51,28 @@ enum MedicationService {
     /// records a `doseChanged` event with an old→new summary. Reason required.
     static func changeDose(
         _ med: Medication,
-        newStrength: String,
+        newStrengthValue: Double, newStrengthUnit: String,
+        newDailyDoseTarget: Double,
         newQuantities: [(item: BatchItem, quantity: Double)],
         reason: String,
         in context: ModelContext
     ) throws {
         try requireReason(reason)
+
+        // Prospective total = sum of quantities, using the new value where provided.
+        let overrides = Dictionary(uniqueKeysWithValues:
+            newQuantities.map { ($0.item.persistentModelID, $0.quantity) })
+        let prospective = (med.batchItems ?? []).reduce(0.0) { sum, item in
+            sum + (overrides[item.persistentModelID] ?? item.quantity)
+        }
+        if DoseAllocation.isOverTarget(allocated: prospective, target: newDailyDoseTarget) {
+            throw DoseAllocationError.exceedsDailyTarget
+        }
+
         let oldSummary = doseSummary(med)
-        med.strength = newStrength
+        med.strengthValue = newStrengthValue
+        med.strengthUnit = newStrengthUnit
+        med.dailyDoseTarget = newDailyDoseTarget
         for change in newQuantities {
             change.item.quantity = change.quantity
         }
@@ -57,6 +82,20 @@ enum MedicationService {
             oldValue: oldSummary, newValue: newSummary, medication: med))
         try context.save()
      }
+
+    /// Adds a medication to a batch with a chosen quantity, rejecting anything
+    /// that would push total allocation past the daily-dose target. Initial
+    /// placement needs no reason.
+    static func addToBatch(
+        _ med: Medication, _ batch: Batch, quantity: Double,
+        in context: ModelContext
+    ) throws {
+        if DoseAllocation.isOverTarget(allocated: DoseAllocation.allocated(med) + quantity, target: med.dailyDoseTarget) {
+            throw DoseAllocationError.exceedsDailyTarget
+        }
+        context.insert(BatchItem(quantity: quantity, medication: med, batch: batch))
+        try context.save()
+    }
 
     /// Updates a single membership's instructions and records an
     /// `instructionsChanged` event. Reason required.
@@ -81,14 +120,14 @@ enum MedicationService {
     @discardableResult
     static func swap(
         _ oldMed: Medication,
-        newName: String, newStrength: String, newForm: String,
+        newName: String, newStrengthValue: Double, newStrengthUnit: String, newForm: String,
         inheritSchedule: Bool,
         reason: String,
         in context: ModelContext
     ) throws -> Medication {
         try requireReason(reason)
 
-        let newMed = Medication(name: newName, strength: newStrength, form: newForm)
+        let newMed = Medication(name: newName, strengthValue: newStrengthValue, strengthUnit: newStrengthUnit, form: newForm)
         context.insert(newMed)
 
         if inheritSchedule {
@@ -100,14 +139,15 @@ enum MedicationService {
             }
         }
 
-        let oldDescription = "\(oldMed.name) \(oldMed.strength)"
+        let oldDescription = "\(oldMed.name) \(oldMed.strengthDescription)"
         oldMed.successor = newMed
         oldMed.isActive = false
         oldMed.discontinuedAt = .now
 
         context.insert(MedicationChangeEvent(
             type: .swapped, reasoning: reason,
-            oldValue: oldDescription, newValue: "\(newName) \(newStrength)",
+            oldValue: oldDescription,
+            newValue: "\(newName) \(DoseFormat.qty(newStrengthValue)) \(newStrengthUnit)",
             medication: oldMed))
         context.insert(MedicationChangeEvent(
             type: .added, reasoning: reason, medication: newMed))
@@ -152,7 +192,7 @@ enum MedicationService {
             .sorted { ($0.batch?.name ?? "") < ($1.batch?.name ?? "") }
             .map { "\($0.batch?.name ?? "?") \(DoseFormat.qty($0.quantity))" }
         let schedule = parts.isEmpty ? "PRN" : parts.joined(separator: ", ")
-        return "\(med.strength) — \(schedule)"
+        return "\(med.strengthDescription) — \(schedule)"
     }
 
     static func requireReason(_ reason: String) throws {

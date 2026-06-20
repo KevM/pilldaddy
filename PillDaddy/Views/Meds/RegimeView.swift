@@ -42,7 +42,7 @@ struct RegimeView: View {
                         } label: {
                             VStack(alignment: .leading) {
                                 Text(med.name)
-                                Text(med.strength).font(.caption).foregroundStyle(.secondary)
+                                Text(med.strengthDescription).font(.caption).foregroundStyle(.secondary)
                             }
                         }
                     }
@@ -66,8 +66,9 @@ struct RegimeView: View {
         HStack {
             VStack(alignment: .leading) {
                 Text(item.medication?.name ?? "—")
-                Text(item.medication?.strength ?? "")
+                Text(item.medication?.strengthDescription ?? "")
                     .font(.caption).foregroundStyle(.secondary)
+                if let med = item.medication { DoseAllocationBadge(medication: med) }
             }
             Spacer()
             Text("\(DoseFormat.qty(item.quantity)) \(item.medication?.form ?? "")")
