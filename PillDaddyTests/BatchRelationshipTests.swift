@@ -44,4 +44,17 @@ final class BatchRelationshipTests: XCTestCase {
         XCTAssertEqual(batch.recurrenceKind, RecurrenceKind.daily.rawValue)
         XCTAssertEqual(batch.items ?? [], [])
     }
+
+    func testBatchHasStableDistinctUUID() throws {
+        let container = try ModelTestSupport.makeContainer()
+        let context = container.mainContext
+        let a = Batch(name: "A")
+        let b = Batch(name: "B")
+        context.insert(a); context.insert(b)
+        try context.save()
+        XCTAssertNotEqual(a.uuid, b.uuid)
+        let savedID = a.uuid
+        XCTAssertEqual(a.uuid, savedID)   // stable across access
+    }
 }
+
