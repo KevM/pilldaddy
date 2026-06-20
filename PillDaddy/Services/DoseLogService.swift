@@ -49,7 +49,16 @@ enum DoseLogService {
         try? context.save()
     }
 
+    /// Writes a `missed` row for the item's slot on `day` only if nothing is logged
+    /// there yet (never overwrites a taken/skipped dose). Idempotent.
+    static func materializeMissed(_ item: BatchItem, on day: Date, in context: ModelContext) {
+        guard existingLog(for: item, on: day) == nil else { return }
+        upsert(item: item, on: day, status: .missed, takenAt: nil, note: "", in: context)
+        try? context.save()
+    }
+
     // MARK: - PRN
+
 
     /// Records a new ad-hoc PRN dose (never upserted — each is its own dose).
     @discardableResult
