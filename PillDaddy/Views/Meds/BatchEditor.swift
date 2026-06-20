@@ -114,7 +114,7 @@ struct BatchEditor: View {
                                     errorMessage = errorMessage(for: error)
                                 }
                             }
-                            .disabled(addQuantity > DoseAllocation.remaining(med))
+                            .disabled(DoseAllocation.isOverTarget(allocated: DoseAllocation.allocated(med) + addQuantity, target: med.dailyDoseTarget))
                         }
                     }
                     .alert("Cannot Add", isPresented: Binding(
