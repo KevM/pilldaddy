@@ -11,6 +11,7 @@ enum HealthMetricService {
     enum ServiceError: Error, Equatable { case implausible, bloodPressureIncomplete }
 
     private static var isSyncing = false
+    private static var activeSyncingIds: Set<PersistentIdentifier> = []
 
     static func recordScalar(kind: MetricKind, value: Double, note: String,
                              recordedAt: Date = .now,
@@ -115,6 +116,10 @@ enum HealthMetricService {
         let pending = (try? context.fetch(fd)) ?? []
         var synced = 0
         for row in pending where writer.authorizationStatus(for: row.metricKind) == .authorized {
+            let id = row.persistentModelID
+            guard !activeSyncingIds.contains(id) else { continue }
+            activeSyncingIds.insert(id)
+            
             let objects = HealthSampleMapper.map(row)
             do {
                 try await writer.save(objects)
@@ -124,6 +129,7 @@ enum HealthMetricService {
             } catch {
                 // Leave it pending; a later foreground or manual sync can retry.
             }
+            activeSyncingIds.remove(id)
         }
         if synced > 0 { try? context.save() }
         return synced
@@ -131,6 +137,11 @@ enum HealthMetricService {
 
     private static func commit(_ metric: HealthMetric, writer: HealthKitWriting,
                                in context: ModelContext) async {
+        let id = metric.persistentModelID
+        guard !activeSyncingIds.contains(id) else { return }
+        activeSyncingIds.insert(id)
+        defer { activeSyncingIds.remove(id) }
+
         await writer.requestAuthorizationIfNeeded()
         let objects = HealthSampleMapper.map(metric)
         do {

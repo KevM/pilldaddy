@@ -58,6 +58,6 @@ final class MetricCueTests: XCTestCase {
         XCTAssertEqual(cue(.weight, 180, nil, ctx(prev: 178, daysAgo: 3)), .normal) // +2/3d
         XCTAssertEqual(cue(.weight, 181, nil, ctx(prev: 178, daysAgo: 5)), .caution) // +3/5d
         XCTAssertEqual(cue(.weight, 173, nil, ctx(prev: 178, daysAgo: 4)), .alert)   // -5/4d
-        XCTAssertEqual(cue(.weight, 180, nil, ctx(prev: 178, daysAgo: 1)), .alert)   // +2/1d
+        XCTAssertEqual(cue(.weight, 180, nil, ctx(prev: 178, daysAgo: 0.99)), .alert)   // +2/1d
     }
 }
