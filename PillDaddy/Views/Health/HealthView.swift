@@ -8,6 +8,7 @@ struct HealthView: View {
     @Query(sort: \HealthMetric.recordedAt, order: .reverse) private var metrics: [HealthMetric]
 
     @State private var showAdd = false
+    @State private var showSyncStatus = false
     @State private var pendingDelete: HealthMetric?
 
     private let writer: HealthKitWriting = LiveHealthKitWriter()
@@ -21,9 +22,14 @@ struct HealthView: View {
                         Spacer()
                         Text(valueText(metric)).foregroundStyle(.secondary)
                         if !metric.healthKitSynced {
-                            Image(systemName: "icloud.slash")
-                                .font(.caption).foregroundStyle(.tertiary)
-                                .accessibilityLabel("Not synced to Apple Health")
+                            Button {
+                                showSyncStatus = true
+                            } label: {
+                                Image(systemName: "heart.slash")
+                                    .font(.caption).foregroundStyle(.orange)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Not synced to Apple Health")
                         }
                     }
                     .swipeActions { Button("Delete", role: .destructive) { pendingDelete = metric } }
@@ -48,6 +54,11 @@ struct HealthView: View {
         .sheet(item: $pendingDelete) { metric in
             DeleteMetricSheet(metric: metric) {
                 HealthMetricService.delete(metric, in: context)
+            }
+        }
+        .sheet(isPresented: $showSyncStatus) {
+            NavigationStack {
+                HealthSyncStatusView(writer: writer)
             }
         }
     }

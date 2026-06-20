@@ -9,6 +9,7 @@ struct HealthSyncStatusView: View {
 
     @Environment(\.modelContext) private var context
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dismiss) private var dismiss
 
     @State private var pending = 0
     @State private var syncMessage: String?
@@ -45,6 +46,11 @@ struct HealthSyncStatusView: View {
         }
         .navigationTitle("Apple Health")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Done") { dismiss() }
+            }
+        }
         .onAppear { pending = HealthMetricService.pendingCount(in: context) }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { pending = HealthMetricService.pendingCount(in: context) }
