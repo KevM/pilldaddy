@@ -25,6 +25,11 @@ targets:
         UIRequiresFullScreen: true
         UIBackgroundModes:
           - remote-notification
+        NSSupportsLiveActivities: true
+        CFBundleURLTypes:
+          - CFBundleURLSchemes:
+              - pilldaddy
+
     settings:
       base:
         CODE_SIGN_ENTITLEMENTS: PillDaddy/PillDaddy.entitlements
