@@ -23,7 +23,7 @@ not a new screen), keeping all metrics in a single session.
 | Editing | **Add / view / delete**, no edit | Delete + re-add covers correction. YAGNI. Delete is guarded by a confirmation disclosure (see Deletion). |
 | Units | **US customary** (Weight = lb, Water = fl oz) | BP = mmHg, Pulse = bpm, SpO₂ = % are fixed. HealthKit stores canonical units and converts. Units are a **single seam** (see Localization readiness) so switching to metric later is contained. |
 | Input cues | **Advisory green/yellow/red cues** on entry, never blocking | Color-cue values against clinical ranges (BP, pulse, SpO₂), plausibility (water), or change vs the previous reading (weight Δ). A red reading is still **saveable** — it's valid data. Separate from a hard plausibility bound. See Validation & clinical cues. |
-| Water entry | **Quick-add chips** (+8 / +12 / +16 / +32 oz) | Water is additive; chips beat typing. Other scalars (Weight) are a plain number. |
+| Water entry | **Quick-add chips** (+8 / +12 / +16 oz) + a **Custom amount** entry (default 32 oz) | Water is additive; chips beat typing, with a manual fallback for any other amount. Other scalars (Weight) are a plain number. |
 | Location | Existing **Health** tab (Session 0 stub, tag 3) | No new tab; replaces the "Coming soon" placeholder. |
 
 ## Architecture
