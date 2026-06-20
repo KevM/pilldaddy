@@ -1,5 +1,6 @@
 import Foundation
 import SwiftData
+import UserNotifications
 
 enum ReminderKind: String, CaseIterable {
     case headsUp, due, followUp
@@ -99,4 +100,50 @@ enum ReminderScheduler {
         return Planned(identifier: id, batchUUID: batch.uuid.uuidString,
                        fireDate: fire, kind: kind, title: title, body: body)
     }
+
+    /// Keys for batch slots in the horizon that are already fully logged (state == .taken),
+    /// so the scheduler can skip pestering for them.
+    static func completedSlotKeys(batches: [Batch], now: Date, horizonDays: Int) -> Set<String> {
+        let cal = Calendar.current
+        var keys: Set<String> = []
+        for offset in 0..<max(horizonDays, 0) {
+            guard let day = cal.date(byAdding: .day, value: offset, to: now) else { continue }
+            for bd in DayQuery.batchDays(from: batches, on: day) where bd.state == .taken {
+                keys.insert(slotKey(batchUUID: bd.batch.uuid.uuidString, slot: bd.slotDate))
+            }
+        }
+        return keys
+    }
+
+    /// Rebuilds the pending-notification set: removes all pending requests and re-adds
+    /// the current plan. Called on launch/foreground, after logging, and on settings change.
+    static func reschedule(
+        batches: [Batch],
+        settings: ReminderSettings,
+        now: Date = .now,
+        horizonDays: Int = 3,
+        completedSlots: Set<String>,
+        center: UNUserNotificationCenter = .current()
+    ) {
+        let planned = plan(
+            batches: batches, now: now, horizonDays: horizonDays,
+            graceMinutes: settings.graceMinutes,
+            headsUpEnabled: settings.headsUpEnabled,
+            masterEnabled: settings.remindersEnabled,
+            completedSlots: completedSlots)
+
+        center.removeAllPendingNotificationRequests()
+        let cal = Calendar.current
+        for p in planned {
+            let content = UNMutableNotificationContent()
+            content.title = p.title
+            content.body = p.body
+            content.sound = .default
+            content.userInfo = ["batchUUID": p.batchUUID]
+            let comps = cal.dateComponents([.year, .month, .day, .hour, .minute], from: p.fireDate)
+            let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)
+            center.add(UNNotificationRequest(identifier: p.identifier, content: content, trigger: trigger))
+        }
+    }
 }
+
