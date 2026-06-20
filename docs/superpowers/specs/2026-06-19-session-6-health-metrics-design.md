@@ -103,8 +103,7 @@ rows carry their own `unit`. We ship US customary now; we do not build runtime u
   the protocol and tests use a fake. The mapping logic (HealthMetric → sample) is a **pure
   function**, unit-testable without a live store.
 - **Authorization:** request write access for the five HK types lazily on the **first capture
-  attempt** (not on mere Health-tab browsing). Requires `NSHealthUpdateUsageDescription` + the HealthKit entitlement,
-  added now (broader privacy-string/onboarding polish stays in Session 7).
+  attempt** (not on mere Health-tab browsing). See **Authorization & permissions** below.
 - **Write timing:** **persist the `HealthMetric` locally first, always.** Then attempt the HK
   write. If Health is unavailable or authorization denied, the reading is still saved with
   `healthKitSynced = false` — capture never blocks on Health. No retry queue in v1 (a future
@@ -117,6 +116,40 @@ rows carry their own `unit`. We ship US customary now; we do not build runtime u
   | Pulse | `HKQuantitySample` `heartRate`, count/min |
   | SpO₂ | `HKQuantitySample` `oxygenSaturation`, percent (0–1) |
   | Blood Pressure | `HKCorrelation` `bloodPressure` of `bloodPressureSystolic` + `bloodPressureDiastolic`, `mmHg` |
+
+### Authorization & permissions
+
+HealthKit's authorization model has sharp edges. We're **write-only**, which is the simpler
+half — but these points must be handled explicitly, not glossed.
+
+- **Project setup (provisioning).** Two pieces, mirroring the earlier CloudKit work:
+  - `com.apple.developer.healthkit` (Boolean `true`) added to
+    [`PillDaddy/PillDaddy.entitlements`](../../../PillDaddy/PillDaddy.entitlements), and the
+    HealthKit capability enabled on the App ID. A wrong capability set breaks device signing —
+    same class of pain as the `aps-environment`/Push lesson noted in project memory.
+  - `NSHealthUpdateUsageDescription` (write-only; **no** `NSHealthShareUsageDescription`, since we
+    don't read) added to the app target's Info via `info.properties` in
+    [`project.yml`](../../../project.yml).
+  - Broader privacy-string/onboarding polish still stays in Session 7; only the strictly
+    required Update string lands now.
+- **Availability guard.** Call `HKHealthStore.isHealthDataAvailable()` before touching the
+  store; if false (unsupported device), skip the write path entirely — readings still persist
+  locally.
+- **Write status is visible.** Unlike read access (hidden by HealthKit for privacy),
+  share/write types report honest status via `authorizationStatus(for:)`
+  (`.notDetermined / .sharingDenied / .sharingAuthorized`). We use this to drive UI state.
+- **Prompt shows once.** If the user denies in the system sheet, `requestAuthorization` will not
+  re-present it; the only recovery is **Settings → Health → Data Access & Devices → PillDaddy**.
+  The denied state surfaces a brief hint pointing there rather than silently failing forever.
+- **Per-type granularity.** The sheet lists all five types together and the user may allow some
+  and deny others (e.g. Weight yes, SpO₂ no). The per-row best-effort write handles this
+  naturally — each sample/correlation succeeds or fails independently and sets its own row's
+  `healthKitSynced`.
+- **Multi-device duplicates.** `HealthMetric` rows sync via CloudKit, and Apple Health itself
+  syncs across the user's devices via iCloud. To avoid two devices writing the same reading, we
+  gate writes on the CloudKit-synced `healthKitSynced` flag (and record `healthKitSampleUUID`).
+  A rare race remains (both write before sync converges); accepted in v1, with a future
+  reconcile pass as the eventual fix.
 
 ## Data flow
 
