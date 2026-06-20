@@ -99,8 +99,10 @@ struct VitalsCaptureView: View {
         Task {
             try? await HealthMetricService.recordVitals(systolic: s, diastolic: d, pulse: p,
                                                         spo2: o, note: n, writer: writer, in: context)
+            await MainActor.run {
+                onClose()
+            }
         }
-        onClose()
     }
 }
 

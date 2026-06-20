@@ -101,8 +101,10 @@ struct ScalarCaptureView: View {
         Task {
             try? await HealthMetricService.recordScalar(kind: kind, value: v, note: n,
                                                         writer: writer, in: context)
+            await MainActor.run {
+                onClose()
+            }
         }
-        onClose()
     }
 }
 
