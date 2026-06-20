@@ -18,7 +18,7 @@ not a new screen), keeping all metrics in a single session.
 | Metrics | **Weight, Water, Blood Pressure, Pulse, SpO₂** | Sleep Quality **dropped** — subjective, no clean HealthKit mapping. Can be added later as a specialized form without disturbing this core. |
 | Model | **One generic `HealthMetric`** with an optional `secondaryValue` | A single table is simplest for SwiftData/CloudKit and for Session 5 reporting. `secondaryValue` exists solely so Blood Pressure (120/80) is one row, not two loose paired rows. |
 | Capture surfaces | **Two:** generic *Scalar* + specialized *Vitals* | Five values, but only two capture experiences. |
-| HealthKit sync | **One-way write only**, fire-and-forget | Two-way sync explicitly out of scope (per README/roadmap). |
+| HealthKit sync | **One-way write only**, **deferred by a grace window** | Writes commit ~`graceWindow` (10 min) after entry, not on save — so an in-app delete within the window is a clean undo that never reaches Health. Two-way sync out of scope (per README/roadmap). See Deferred sync. |
 | Editing | **Add / view / delete**, no edit | Delete + re-add covers correction. YAGNI. Delete is guarded by a confirmation disclosure (see Deletion). |
 | Units | **US customary** (Weight = lb, Water = fl oz) | BP = mmHg, Pulse = bpm, SpO₂ = % are fixed. HealthKit stores canonical units and converts. Units are a **single seam** (see Localization readiness) so switching to metric later is contained. |
 | Location | Existing **Health** tab (Session 0 stub, tag 3) | No new tab; replaces the "Coming soon" placeholder. |
@@ -43,10 +43,11 @@ final class HealthMetric {
     var value: Double = 0                            // primary (systolic for BP)
     var secondaryValue: Double? = nil                // diastolic for BP; nil otherwise
     var unit: String = ""                            // canonical display unit
-    var recordedAt: Date = .now
+    var recordedAt: Date = .now                      // when the reading was taken
+    var createdAt: Date = .now                       // when entered — drives the grace window
     var note: String = ""
-    var healthKitSynced: Bool = false                // wrote to Apple Health?
-    var healthKitSampleUUID: String? = nil           // traceability for later dedup
+    var healthKitSynced: Bool = false                // committed to Apple Health?
+    var healthKitSampleUUID: String? = nil           // traceability / dedup
 }
 ```
 
@@ -88,7 +89,8 @@ rows carry their own `unit`. We ship US customary now; we do not build runtime u
   `recordedAt` desc), delete (guarded by a confirmation disclosure — see **Deletion**), and a
   "+" that presents a chooser → Scalar or Vitals.
 - **`ScalarCaptureView(kind:)`** — Weight and Water. One numeric field, label/unit from the
-  definition, range-validated. On save: one `HealthMetric` + HealthKit write.
+  definition, range-validated. On save: one `HealthMetric` persisted locally (the HealthKit
+  write is deferred — see Deferred sync).
   Water is additive (each entry is its own reading); Weight is a snapshot. Same form; the
   difference is only how Session 5 reporting aggregates them later.
 - **`VitalsCaptureView`** — one screen with four optional fields: systolic, diastolic, pulse,
@@ -105,10 +107,9 @@ rows carry their own `unit`. We ship US customary now; we do not build runtime u
   function**, unit-testable without a live store.
 - **Authorization:** request write access for the five HK types lazily on the **first capture
   attempt** (not on mere Health-tab browsing). See **Authorization & permissions** below.
-- **Write timing:** **persist the `HealthMetric` locally first, always.** Then attempt the HK
-  write. If Health is unavailable or authorization denied, the reading is still saved with
-  `healthKitSynced = false` — capture never blocks on Health. No retry queue in v1 (a future
-  reconcile pass can resync `healthKitSynced == false` rows; noted, not built).
+- **Write timing:** **persist the `HealthMetric` locally first, always** (`healthKitSynced =
+  false`). Capture never blocks on Health. The HealthKit write is **deferred**, not done on save
+  — see Deferred sync.
 - **Mapping:**
   | Metric | HealthKit |
   |--------|-----------|
@@ -117,6 +118,40 @@ rows carry their own `unit`. We ship US customary now; we do not build runtime u
   | Pulse | `HKQuantitySample` `heartRate`, count/min |
   | SpO₂ | `HKQuantitySample` `oxygenSaturation`, percent (0–1) |
   | Blood Pressure | `HKCorrelation` `bloodPressure` of `bloodPressureSystolic` + `bloodPressureDiastolic`, `mmHg` |
+
+### Deferred sync (grace window)
+
+Writes are **not** done on save. They are deferred by a **`graceWindow` (10 min)** so a
+mis-entry deleted in-app within the window never reaches Apple Health (a clean undo — HealthKit
+has no "delete what I wrote" path open to us without read access). This single mechanism also
+subsumes the retry/reconcile pass we'd otherwise defer.
+
+- **The rule is declarative, not a live timer.** A live `Timer`/`Task.sleep` cannot be trusted:
+  iOS suspends the app within seconds of backgrounding and may terminate it, so a countdown is
+  lost. Instead the commit is gated on a **stored timestamp**: *write any row where
+  `healthKitSynced == false` and `now − createdAt ≥ graceWindow`.* This is the **unsynced
+  sweep** — idempotent, re-runnable, and also the retry path for rows whose write previously
+  failed.
+- **Sweep triggers**, first-to-fire wins (the gate keeps it idempotent):
+  1. **In-app timer** — best-effort while the app stays foregrounded.
+  2. **Background-transition flush** — on `scenePhase → .background`, wrap a quick sweep in
+     `UIApplication.beginBackgroundTask` to commit already-aged rows before suspension.
+  3. **`BGAppRefreshTask`** — scheduled at `earliestBeginDate ≈ createdAt + graceWindow` to
+     commit *without the app being reopened*. **iOS controls actual timing — `earliestBeginDate`
+     is a floor, not a guarantee** (battery/usage dependent). Best-effort accelerator, not a
+     deadline. Needs background-mode entitlements only — **no APNs/push**, so it does not touch
+     the write-only exemption or device signing (cf. [[cloudkit-no-aps-environment]]).
+  4. **Foreground sweep** — on `scenePhase → .active`, the **guaranteed backstop**. A brief
+     **settle delay** (a few seconds) before it writes aged rows gives a caregiver who reopened
+     specifically to fix a mistake a beat to delete first.
+- **Why not HealthKit's own background delivery?** `HKObserverQuery` + `enableBackgroundDelivery`
+  is an *inbound/read* mechanism (wakes the app when the store changes so it can fetch) — wrong
+  direction for pushing our queued writes out, and it **requires read authorization**, which
+  would collapse the write-only iCloud exemption. HealthKit has no native deferred-*write* API,
+  so the delay must live app-side.
+- **Pending state.** Until committed, a row shows a subtle **"pending sync"** indicator. Pending
+  rows (`healthKitSynced == false`) delete cleanly with no Apple Health caveat (see Deletion);
+  the grace window maximizes that clean-delete window.
 
 ### Authorization & permissions
 
@@ -131,6 +166,10 @@ half — but these points must be handled explicitly, not glossed.
   - `NSHealthUpdateUsageDescription` (write-only; **no** `NSHealthShareUsageDescription`, since we
     don't read) added to the app target's Info via `info.properties` in
     [`project.yml`](../../../project.yml).
+  - **`BGTaskScheduler` setup** (for Deferred sync): add the `fetch` (or `processing`)
+    background mode to `UIBackgroundModes` in [`project.yml`](../../../project.yml) (the existing
+    `remote-notification` mode stays), and register our task identifier under
+    `BGTaskSchedulerPermittedIdentifiers`. **No `aps-environment`/push** — BGTask needs no APNs.
   - Broader privacy-string/onboarding polish still stays in Session 7; only the strictly
     required Update string lands now.
 - **Availability guard.** Call `HKHealthStore.isHealthDataAvailable()` before touching the
@@ -155,13 +194,18 @@ half — but these points must be handled explicitly, not glossed.
 ## Data flow
 
 ```
-VitalsCaptureView / ScalarCaptureView
+Capture (Vitals / Scalar)
   → validate against MetricDefinition range(s)
-  → insert HealthMetric into modelContext   (local persist — always)
-  → HealthKitWriting.write(metric)           (best-effort)
-       → map(metric) -> HKObject(s)          (pure, tested)
-       → store.save(...)
-       → on success: set healthKitSynced = true, healthKitSampleUUID
+  → insert HealthMetric (healthKitSynced = false, createdAt = now)   ← local persist, always
+  → schedule BGAppRefreshTask (earliestBeginDate ≈ createdAt + graceWindow)
+
+[ in-app delete before commit ]  → row removed; never reaches Health  ← clean undo
+
+Unsynced sweep   (triggers: in-app timer | background flush | BGTask | foreground backstop)
+  → for each row where !healthKitSynced && now − createdAt ≥ graceWindow:
+       → map(row) -> HKObject(s)        (pure, tested)
+       → store.save(...)               (skip if unavailable/denied → stays unsynced, retried)
+       → on success: healthKitSynced = true, healthKitSampleUUID
 ```
 
 ## Schema migration
@@ -180,9 +224,9 @@ Seeded rows are local-only (`healthKitSynced = false`); seeding does not touch A
 
 - **Range validation** in capture, from the definition; inline field errors. BP enforces
   both-or-neither.
-- **HealthKit unavailable / denied:** silent to the flow — reading saved locally,
-  `healthKitSynced = false`. Optionally a subtle per-row indicator that it hasn't synced.
-- **HK save failure:** same as denied — local row stands, unsynced.
+- **HealthKit unavailable / denied / save failure:** silent to the flow — the row stays
+  `healthKitSynced = false` and is simply retried by the next unsynced sweep. The "pending sync"
+  indicator covers both not-yet-committed and failed states uniformly.
 
 ## Testing
 
@@ -190,8 +234,16 @@ Seeded rows are local-only (`healthKitSynced = false`); seeding does not touch A
 - **Validation:** range checks; BP both-or-neither; rejects out-of-range.
 - **Mapping (pure):** `map(HealthMetric)` produces the correct HK type, unit, and value
   (incl. BP → correlation of two samples). No live store needed.
-- **Capture → persist:** saving inserts the expected `HealthMetric` row(s); Vitals writes only
-  the present fields; HK denial still persists locally (fake writer that throws).
+- **Capture → persist:** saving inserts the expected `HealthMetric` row(s) with
+  `healthKitSynced = false`; Vitals writes only the present fields.
+- **Unsynced sweep (the core logic):** with an injected clock and a fake writer —
+  - skips rows younger than `graceWindow`; commits rows at/after it.
+  - a row deleted before its age crosses `graceWindow` is never handed to the writer (clean
+    undo).
+  - a writer that throws (denied/unavailable) leaves the row unsynced; a later sweep retries and
+    succeeds (idempotent — already-synced rows are skipped, no double write).
+  - the sweep is pure of UIKit/BGTask: lifecycle triggers just *call* it, so it tests without a
+    device. `graceWindow` and the clock are injectable for deterministic tests (no real waiting).
 
 ## Deletion
 
@@ -225,8 +277,9 @@ Beta App Review — so review rules can bite at the TestFlight stage.
 
 ## Out of scope (this session)
 
-Sleep Quality; editing readings; two-way Health sync; HK resync/retry queue; charts/reporting
-(Session 5); onboarding & broader privacy strings (Session 7).
+Sleep Quality; editing readings; two-way Health sync; HealthKit read/Share access and its
+background delivery; precise/guaranteed background timing or silent-push delivery (BGTask is
+best-effort); charts/reporting (Session 5); onboarding & broader privacy strings (Session 7).
 
 ## Dogfood state
 
