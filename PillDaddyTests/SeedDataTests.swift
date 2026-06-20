@@ -84,5 +84,16 @@ final class SeedDataTests: XCTestCase {
             .map { $0.owningMed.name }
         XCTAssertEqual(addedOwners, ["Atenolol"])
     }
+
+    func testSeedIncludesHealthMetricsAcrossKinds() throws {
+        let container = try ModelTestSupport.makeContainer()
+        SeedData.seedIfEmpty(container.mainContext)
+        let metrics = try container.mainContext.fetch(FetchDescriptor<HealthMetric>())
+        XCTAssertGreaterThanOrEqual(metrics.count, 4)
+        let kinds = Set(metrics.map(\.metricKind))
+        XCTAssertTrue(kinds.contains(.weight))
+        XCTAssertTrue(kinds.contains(.bloodPressure))
+        XCTAssertTrue(metrics.allSatisfy { !$0.healthKitSynced })   // seed never touches Health
+    }
 }
 
