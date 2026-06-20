@@ -46,22 +46,16 @@ struct MedicationDetailView: View {
             }
 
             Section("Why / history") {
-                let events = (medication.changeEvents ?? [])
-                    .sorted { $0.timestamp > $1.timestamp }
-                    .prefix(5)
+                let events = MedicationLineage.events(from: medication)
                 if events.isEmpty {
                     Text("No history yet").foregroundStyle(.secondary)
                 } else {
-                    ForEach(Array(events)) { event in
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(eventTitle(event)).font(.subheadline).bold()
-                            if !event.reasoning.isEmpty {
-                                Text(event.reasoning).font(.caption)
-                            }
-                            if !event.oldValue.isEmpty || !event.newValue.isEmpty {
-                                Text("\(event.oldValue) → \(event.newValue)")
-                                    .font(.caption2).foregroundStyle(.secondary)
-                            }
+                    ForEach(events.prefix(5)) { item in
+                        TimelineEventRow(item: item)
+                    }
+                    if events.count > 5 {
+                        NavigationLink("See full history") {
+                            MedicationTimelineView(anchor: medication)
                         }
                     }
                 }
@@ -92,18 +86,6 @@ struct MedicationDetailView: View {
             case .swap: SwapSheet(oldMed: medication)
             case .lifecycle: LifecycleReasonSheet(medication: medication, reactivating: !medication.isActive)
             }
-        }
-    }
-
-    private func eventTitle(_ event: MedicationChangeEvent) -> String {
-        switch MedChangeType(rawValue: event.eventType) {
-        case .added: return "Added"
-        case .doseChanged: return "Dose changed"
-        case .instructionsChanged: return "Instructions changed"
-        case .swapped: return "Swapped"
-        case .discontinued: return "Discontinued"
-        case .reactivated: return "Reactivated"
-        case .note, .none: return "Note"
         }
     }
 }
