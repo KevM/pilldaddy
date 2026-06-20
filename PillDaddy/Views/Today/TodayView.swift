@@ -4,6 +4,8 @@ import SwiftData
 /// The Today tab: a day's dose-logging checklist.
 struct TodayView: View {
     @Environment(\.modelContext) private var context
+    @Environment(AppRouter.self) private var router
+    @Environment(ReminderSettings.self) private var settings
 
     @Query(sort: [SortDescriptor(\Batch.sortOrder), SortDescriptor(\Batch.timeOfDay)])
     private var batches: [Batch]
@@ -54,8 +56,13 @@ struct TodayView: View {
             .sheet(item: $takingBatch) { BatchTakenConfirmSheet(batchDay: $0, day: selectedDay) }
             .sheet(item: $adjustingBatch) { IndividualAdjustSheet(batchDay: $0, day: selectedDay) }
             .onAppear(perform: autoExpand)
+            .onAppear { focusFromRouter() }
             .onChange(of: selectedDay) { _, _ in autoExpand() }
-            .onChange(of: batchDays.map { $0.state }) { _, _ in autoExpand() }
+            .onChange(of: router.pendingBatchUUID) { _, _ in focusFromRouter() }
+            .onChange(of: batchDays.map { $0.state }) { _, _ in
+                autoExpand()
+                ReminderSync.refresh(context: context, settings: settings)
+            }
         }
     }
 
@@ -97,11 +104,23 @@ struct TodayView: View {
             .min { abs($0.slotDate.timeIntervalSince(now)) < abs($1.slotDate.timeIntervalSince(now)) }?
             .id
     }
+
+    /// Honor a deep link: jump to today and expand the requested batch.
+    private func focusFromRouter() {
+        guard let uuid = router.pendingBatchUUID else { return }
+        if let batch = batches.first(where: { $0.uuid.uuidString == uuid }) {
+            selectedDay = .now
+            expandedID = batch.persistentModelID
+        }
+        router.pendingBatchUUID = nil
+    }
 }
 
 #if DEBUG
 #Preview {
     TodayView()
+        .environment(AppRouter())
+        .environment(ReminderSettings())
         .modelContainer(PreviewSupport.seededContainer())
 }
 #endif

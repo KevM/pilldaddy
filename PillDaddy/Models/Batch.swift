@@ -10,6 +10,8 @@ final class Batch {
     var recurrenceKind: String = RecurrenceKind.daily.rawValue
     var weekdays: [Int]? = nil              // 1...7 when recurrenceKind == "weekdays"
     var sortOrder: Int = 0
+    var uuid: UUID = UUID()
+
 
     @Relationship(deleteRule: .cascade, inverse: \BatchItem.batch)
     var items: [BatchItem]? = []
