@@ -8,5 +8,6 @@ enum PillDaddySchema {
         BatchItem.self,
         DoseLog.self,
         MedicationChangeEvent.self,
+        HealthMetric.self,
     ])
 }

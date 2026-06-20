@@ -7,6 +7,7 @@ struct SettingsView: View {
     @Environment(ReminderSettings.self) private var settings
     @Environment(\.modelContext) private var context
     @State private var authStatus: UNAuthorizationStatus = .notDetermined
+    private let healthWriter: HealthKitWriting = LiveHealthKitWriter()
 
     private let graceChoices: [(String, Int)] = [
         ("30 min", 30), ("1 hour", 60), ("90 min", 90),
@@ -31,6 +32,14 @@ struct SettingsView: View {
 
                 Section(header: Text("Notifications")) {
                     permissionRow
+                }
+
+                Section(header: Text("Apple Health")) {
+                    NavigationLink {
+                        HealthSyncStatusView(writer: healthWriter)
+                    } label: {
+                        Label("Apple Health", systemImage: "heart")
+                    }
                 }
 
             }

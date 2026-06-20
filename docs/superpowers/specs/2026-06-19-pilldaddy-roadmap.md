@@ -109,14 +109,37 @@ presentation/printing/sharing; resolve during this session's brainstorm.
 **Dogfood state:** Useful once dose history has accumulated.
 
 ### Session 6 — Health metrics + HealthKit
-**Depends on:** 0 (independent track)
-Capture Blood Pressure, Pulse / SpO₂, Weight, Water Intake, Sleep Quality. One-way write to
-Apple Health (HealthKit). Two-way sync explicitly out of scope for now.
+**Depends on:** 0 (independent track — may be built ahead of Session 5)
+Capture **Blood Pressure, Pulse / SpO₂, Weight, Water Intake** via a generic `HealthMetric`
+model + metric-definition registry and two capture surfaces (scalar + vitals). One-way write to
+Apple Health (HealthKit). **Sleep Quality dropped** (subjective, no clean Health mapping);
+two-way sync out of scope. See
+[`2026-06-19-session-6-health-metrics-design.md`](2026-06-19-session-6-health-metrics-design.md).
 **Dogfood state:** Adds metric tracking that flows to Apple Health.
 
-### Session 7 — Polish & TestFlight *(later)*
+### Session 7 — Launch readiness: polish, TestFlight & public website *(later)*
 **Depends on:** most
-Onboarding, HealthKit/privacy usage strings, app icon, TestFlight distribution prep.
+App polish and distribution prep **plus a public marketing website**, bundled because the
+website's privacy policy is a hard prerequisite for HealthKit App Review and external TestFlight.
+
+- **App polish:** onboarding, HealthKit/privacy usage strings, medical disclaimer copy, app icon.
+- **TestFlight prep:** distribution signing/capabilities, App Privacy "nutrition label"
+  questionnaire, App Store Connect metadata (incl. privacy-policy URL → the website below).
+- **Public website** (`web/` in this repo), modeled on the `20four7` site in
+  [`../televista/web`](../../../../televista/web): a **plain static site** (hand-written
+  HTML/CSS, no build step), deployed to **Vercel** with a custom domain (CNAME) + Vercel Web
+  Analytics. Three pages reusing one stylesheet:
+  - **Landing** — caregiver-framed pitch (color-coded regimes, dose logging, reasoning journal,
+    Health metrics). *Not* the ambient-TV framing of 20four7.
+  - **Support** — contact / FAQ.
+  - **Privacy policy** — satisfies the HealthKit/App Store privacy-policy requirement; states
+    that data lives in the user's iCloud, is not shared/sold, and (per Session 6) that health
+    metrics are written one-way to Apple Health and never read back into iCloud.
+  - 20four7's `channels-catalog.json` remote-config piece is **not** carried over — PillDaddy
+    has no remote catalog.
+
+Each of polish / TestFlight / website may still be brainstormed and built as its own slice
+within this session if it proves large.
 
 ## Next step
 

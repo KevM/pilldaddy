@@ -90,6 +90,16 @@ enum SeedData {
             scheduledDate: time(14, 30), takenAt: time(14, 30), status: .taken, quantity: 1.0,
             snapshotMedName: acetaminophen.name, snapshotStrength: acetaminophen.strength,
             medication: acetaminophen, batchItem: nil))
+
+        // Health metrics — a few recent readings so the Health tab is exercisable.
+        // Local-only; never written to Apple Health by the seed.
+        context.insert(HealthMetric(kind: .weight, value: 178, unit: "lb", recordedAt: daysAgo(2)))
+        context.insert(HealthMetric(kind: .weight, value: 182, unit: "lb", recordedAt: .now))
+        context.insert(HealthMetric(kind: .water, value: 16, unit: "oz", recordedAt: .now))
+        context.insert(HealthMetric(kind: .bloodPressure, value: 152, secondaryValue: 96,
+                                    unit: "mmHg", recordedAt: .now))
+        context.insert(HealthMetric(kind: .pulse, value: 68, unit: "bpm", recordedAt: .now))
+        context.insert(HealthMetric(kind: .oxygenSaturation, value: 93, unit: "%", recordedAt: .now))
     }
 }
 

@@ -23,3 +23,10 @@ enum MedChangeType: String, CaseIterable, Identifiable {
     case added, doseChanged, instructionsChanged, swapped, discontinued, reactivated, note
     var id: String { rawValue }
 }
+
+/// A health metric kind. Stored on HealthMetric as a raw String.
+enum MetricKind: String, CaseIterable, Identifiable {
+    case weight, water, bloodPressure, pulse, oxygenSaturation
+    var id: String { rawValue }
+}
+

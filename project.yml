@@ -29,6 +29,9 @@ targets:
         CFBundleURLTypes:
           - CFBundleURLSchemes:
               - pilldaddy
+        NSHealthUpdateUsageDescription: PillDaddy saves the patient's health readings to Apple Health.
+        LSApplicationQueriesSchemes:
+          - x-apple-health
 
     settings:
       base:
