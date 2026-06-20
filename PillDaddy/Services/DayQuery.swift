@@ -80,7 +80,7 @@ enum DayQuery {
         let cal = Calendar.current
         return meds.map { med in
             let logs = (med.doseLogs ?? [])
-                .filter { $0.batchItem == nil && cal.isDate($0.scheduledDate, inSameDayAs: day) }
+                .filter { $0.isPRN && cal.isDate($0.scheduledDate, inSameDayAs: day) }
                 .sorted { ($0.takenAt ?? $0.scheduledDate) > ($1.takenAt ?? $1.scheduledDate) }
             return PRNDose(med: med, logs: logs)
         }

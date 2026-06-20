@@ -40,5 +40,15 @@ struct DoseLogServicePRNTests {
         DoseLogService.deletePRNLog(first, in: context)
         #expect(try logs().count == 1)
     }
+
+    @Test
+    func testLogPRNSetsIsPRNFlag() throws {
+        let med = Medication(name: "Acetaminophen", strengthValue: 500, strengthUnit: "mg",
+                             dailyDoseTarget: 1.0, isPRN: true)
+        context.insert(med)
+        DoseLogService.logPRN(med, takenAt: .now, quantity: 1.0, note: "", in: context)
+        let all = try logs()
+        #expect(all.allSatisfy { $0.isPRN })
+    }
 }
 

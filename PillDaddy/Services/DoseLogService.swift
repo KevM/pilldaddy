@@ -70,7 +70,7 @@ enum DoseLogService {
             quantity: quantity, notes: note,
             snapshotMedName: med.name, snapshotStrength: med.strengthDescription,
             snapshotStrengthValue: med.strengthValue, snapshotStrengthUnit: med.strengthUnit,
-            snapshotBatchColorHex: "", medication: med, batchItem: nil)
+            snapshotBatchColorHex: "", isPRN: true, medication: med, batchItem: nil)
         context.insert(log)
         try? context.save()
         return log
