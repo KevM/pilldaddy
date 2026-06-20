@@ -62,9 +62,10 @@ static registry keyed by kind. Declares everything the UI and the writer need:
 ```swift
 enum MetricCue { case normal, caution, alert }   // → green / yellow / red (advisory)
 
-struct CueContext {              // history for contextual cues (weight); absolute cues ignore it
-    let previousValue: Double?   // latest prior reading of the same kind
+struct CueContext {              // history for contextual cues; absolute cues ignore it
+    let previousValue: Double?   // latest prior reading of the same kind (weight Δ)
     let previousDate: Date?
+    let todayTotal: Double?      // sum of same-kind readings already recorded today (water total)
     let now: Date
 }
 
@@ -112,14 +113,19 @@ disclaimer):
 | BP diastolic (mmHg) | 60–79 | 40–59 or 80–119 | <40 or ≥120 |
 | Pulse (bpm) | 60–100 | 50–59 or 101–120 | <50 or >120 |
 | SpO₂ (%) | 95–100 | 91–94 | ≤90 |
-| Water (oz, per entry — plausibility) | ≤32 | 33–64 | >64 |
+| Water — per entry (plausibility, oz) | ≤32 | 33–64 | >64 |
+| Water — daily total (oz) | ≤100 | 101–135 | >135 |
 | Weight Δ vs previous (gain *or* loss) | <3 lb | ≥3 lb within ≤7 d | ≥5 lb within ≤7 d, or ≥2 lb within ≤1 d |
 
 - **BP** (ACC/AHA 2017 categories + symmetric hypotension bands): overall cue = **the more
   severe of the systolic/diastolic** classifications, so a low diastolic alone can drive the cue.
-- **Weight** is the one **contextual** cue: it compares against the latest prior weight via
-  `CueContext` (heart-failure daily-weight rule, applied to gain *and* loss). No prior reading →
-  `.normal`. Absolute-cue metrics ignore `CueContext`.
+- **Water** and **Weight** are **contextual** cues (they read `CueContext`; absolute metrics
+  ignore it):
+  - Water's cue = the worse of its per-entry plausibility band and the **daily-total** band
+    (`todayTotal` + this entry). The daily total is a general advisory; a true per-patient
+    fluid-restriction limit and a rate-of-intake (hyponatremia) cue are deferred to Future work.
+  - Weight compares against the latest prior weight (heart-failure daily-weight rule, gain *and*
+    loss). No prior reading → `.normal`.
 - All thresholds are constants in the registry — the single place to tune and the single thing
   tests assert.
 
@@ -127,13 +133,14 @@ disclaimer):
 
 - **`HealthView`** replaces the placeholder: a list of recent `HealthMetric` rows (sorted by
   `recordedAt` desc), delete (guarded by a confirmation disclosure — see **Deletion**), and a
-  "+" that presents a **3-way chooser** — Weight, Water, or Vitals (BP · pulse · SpO₂). Weight
-  and Water both route to `ScalarCaptureView`; Vitals to `VitalsCaptureView`.
+  "+" that presents a **3-way chooser** — Water, Weight, or Vitals (BP · pulse · SpO₂). Water
+  and Weight both route to `ScalarCaptureView`; Vitals to `VitalsCaptureView`.
 - **`ScalarCaptureView(kind:)`** — Weight and Water. One numeric field, label/unit from the
   definition; the value carries its live **cue color**. For Water the definition's `quickAdd`
-  chips (+8/+12/+16/+32 oz) add to the running amount. For Weight the screen loads the latest
-  prior weight to build the `CueContext` and shows the change (e.g. "▲ 4 lb since Jun 17") in the
-  cue color. On save: one `HealthMetric` persisted locally, then a best-effort HealthKit write.
+  chips (+8/+12/+16/+32 oz) add to this entry; the screen also loads today's prior water to build
+  `CueContext.todayTotal` and shows the running daily total (e.g. "84 oz today"), so the cue
+  reflects both this entry and the day. For Weight the screen loads the latest prior weight into
+  `CueContext` and shows the change (e.g. "▲ 4 lb since Jun 17") in the cue color. On save: one `HealthMetric` persisted locally, then a best-effort HealthKit write.
   Water is additive (each entry is its own reading); Weight is a snapshot. Same form; the
   difference is only how Session 5 reporting aggregates them later.
 - **`VitalsCaptureView`** — one screen with four optional fields: systolic, diastolic, pulse,
@@ -249,7 +256,10 @@ Seeded rows are local-only (`healthKitSynced = false`); seeding does not touch A
 - **Clinical cues (table-driven):** assert each metric's `cue` at the boundary values from the
   thresholds table — BP worse-of-the-two: 110/75 → normal, 120/78 & 110/95 → caution, 185/78 &
   150/125 → alert, low 88/58 → caution, low-diastolic-only 120/38 → alert; pulse 60/100 normal
-  vs 49/121 alert; SpO₂ 95 normal, 94 caution, 90 alert; water 32 normal, 33 caution, 65 alert.
+  vs 49/121 alert; SpO₂ 95 normal, 94 caution, 90 alert; water per-entry 32 normal, 33 caution, 65 alert.
+- **Water daily-total cue (contextual):** with `todayTotal` — entry 16 on a 84 oz day (→100)
+  normal, on a 90 oz day (→106) caution, on a 130 oz day (→146) alert; worse-of wins, so a 70 oz
+  single entry is alert on per-entry even at a low daily total.
 - **Weight delta cue (contextual):** with a `CueContext` — no prior → normal; +2 lb over 3 d →
   normal; +3 lb over 5 d → caution; −5 lb over 4 d → alert; +2 lb over 1 d → alert. (Loss cues
   the same as gain.) Cues never reject.
@@ -311,6 +321,9 @@ later without reworking the core:
   [[cloudkit-no-aps-environment]]). This also gives automatic retry of failed/denied writes.
   Note: HealthKit's own background delivery is read-side only and would break the write-only
   iCloud exemption, so it can't be used for outbound writes (see [[healthkit-write-only-icloud-exemption]]).
+- **Richer water cues.** A per-patient **fluid-restriction limit** (a setting, for heart-failure
+  / kidney patients whose safe daily total is well below the general band) and a **rate-of-intake**
+  cue (hyponatremia risk, ~>1 L/hour) needing intra-hour timestamp windowing.
 - **Patient-device gate.** A device-local `isPatientDevice` flag so only the patient's device
   writes to Health, instead of assuming installation placement.
 - **Caregiver proxy app.** A companion experience letting a caregiver capture the patient's
