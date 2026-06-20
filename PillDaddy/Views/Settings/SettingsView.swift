@@ -38,7 +38,7 @@ struct SettingsView: View {
                     NavigationLink {
                         HealthSyncStatusView(writer: healthWriter)
                     } label: {
-                        Label("Health Integration", systemImage: "heart.fill")
+                        Label("Apple Health", systemImage: "heart")
                     }
                 }
 

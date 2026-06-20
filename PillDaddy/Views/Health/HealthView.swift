@@ -29,7 +29,7 @@ struct HealthView: View {
                                     .font(.caption).foregroundStyle(.orange)
                             }
                             .buttonStyle(.plain)
-                            .accessibilityLabel("Not synced to Apple Health")
+                            .accessibilityLabel("Not in Apple Health — tap for options")
                         }
                     }
                     .swipeActions { Button("Delete", role: .destructive) { pendingDelete = metric } }

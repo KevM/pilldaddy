@@ -14,7 +14,7 @@ struct HealthPermissionNotice: View {
 
     var body: some View {
         Group {
-            if writer.isHealthDataAvailable && status != .authorized {
+            if writer.isHealthDataAvailable && status == .denied {
                 VStack(alignment: .leading, spacing: 8) {
                     Label("\(MetricRegistry.definition(for: kind).displayName) won't be saved to Apple Health",
                           systemImage: "heart.slash")

@@ -10,6 +10,8 @@ enum HealthAuthState: Equatable { case unavailable, notDetermined, authorized, p
 enum HealthMetricService {
     enum ServiceError: Error, Equatable { case implausible, bloodPressureIncomplete }
 
+    private static var isSyncing = false
+
     static func recordScalar(kind: MetricKind, value: Double, note: String,
                              recordedAt: Date = .now,
                              writer: HealthKitWriting, in context: ModelContext) async throws {
@@ -104,6 +106,10 @@ enum HealthMetricService {
     /// duplicates — these rows were never written. Returns the count newly synced.
     @discardableResult
     static func resyncPending(writer: HealthKitWriting, in context: ModelContext) async -> Int {
+        guard !isSyncing else { return 0 }
+        isSyncing = true
+        defer { isSyncing = false }
+
         guard writer.isHealthDataAvailable else { return 0 }
         let fd = FetchDescriptor<HealthMetric>(predicate: #Predicate { $0.healthKitSynced == false })
         let pending = (try? context.fetch(fd)) ?? []
