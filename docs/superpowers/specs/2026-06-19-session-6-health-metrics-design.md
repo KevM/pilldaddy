@@ -19,6 +19,7 @@ not a new screen), keeping all metrics in a single session.
 | Model | **One generic `HealthMetric`** with an optional `secondaryValue` | A single table is simplest for SwiftData/CloudKit and for Session 5 reporting. `secondaryValue` exists solely so Blood Pressure (120/80) is one row, not two loose paired rows. |
 | Capture surfaces | **Two:** generic *Scalar* + specialized *Vitals* | Five values, but only two capture experiences. |
 | HealthKit sync | **One-way write only**, **deferred by a grace window** | Writes commit ~`graceWindow` (10 min) after entry, not on save — so an in-app delete within the window is a clean undo that never reaches Health. Two-way sync out of scope (per README/roadmap). See Deferred sync. |
+| Health subject | **Patient-device gate** — only the patient's device writes to Apple Health | HealthKit is device-local/single-subject: data written = the *device owner's* health record. To avoid mis-attributing the patient's readings onto a caregiver's record, only a device explicitly marked as the patient's writes to Health. See Patient-device gate. |
 | Editing | **Add / view / delete**, no edit | Delete + re-add covers correction. YAGNI. Delete is guarded by a confirmation disclosure (see Deletion). |
 | Units | **US customary** (Weight = lb, Water = fl oz) | BP = mmHg, Pulse = bpm, SpO₂ = % are fixed. HealthKit stores canonical units and converts. Units are a **single seam** (see Localization readiness) so switching to metric later is contained. |
 | Location | Existing **Health** tab (Session 0 stub, tag 3) | No new tab; replaces the "Coming soon" placeholder. |
@@ -105,8 +106,9 @@ rows carry their own `unit`. We ship US customary now; we do not build runtime u
 - **`HealthKitWriting` protocol** wrapping the real `HKHealthStore`, so capture flows depend on
   the protocol and tests use a fake. The mapping logic (HealthMetric → sample) is a **pure
   function**, unit-testable without a live store.
-- **Authorization:** request write access for the five HK types lazily on the **first capture
-  attempt** (not on mere Health-tab browsing). See **Authorization & permissions** below.
+- **Authorization:** only on a **patient device** (see Patient-device gate); request write
+  access for the five HK types lazily on the first capture attempt there (not on mere Health-tab
+  browsing). See **Authorization & permissions** below.
 - **Write timing:** **persist the `HealthMetric` locally first, always** (`healthKitSynced =
   false`). Capture never blocks on Health. The HealthKit write is **deferred**, not done on save
   — see Deferred sync.
@@ -118,6 +120,30 @@ rows carry their own `unit`. We ship US customary now; we do not build runtime u
   | Pulse | `HKQuantitySample` `heartRate`, count/min |
   | SpO₂ | `HKQuantitySample` `oxygenSaturation`, percent (0–1) |
   | Blood Pressure | `HKCorrelation` `bloodPressure` of `bloodPressureSystolic` + `bloodPressureDiastolic`, `mmHg` |
+
+### Patient-device gate
+
+HealthKit can only write to the **local device owner's** Health store (device-local,
+single-subject; a sample records the writing *app*, never the *person*). Since PillDaddy tracks
+a patient who is often *not* the caregiver operating the app, writing on a caregiver's device
+would mis-file the patient's readings as the **caregiver's** health record. So Apple Health
+writes are gated to the patient's own device.
+
+- **`isPatientDevice` — a device-local flag** (e.g. `UserDefaults`/`@AppStorage`), **never a
+  CloudKit/`@Model` field** — otherwise it would sync and every device would claim to be the
+  patient's. Default **off** (safest: never write to Health until explicitly enabled).
+- Exposed as a Settings toggle in this session: *"Write metrics to Apple Health on this device —
+  enable only on the patient's own device."* (Onboarding placement is Session 7.)
+- **Only when `isPatientDevice` is true** does the app request HealthKit authorization or run the
+  HealthKit commit. On caregiver-only devices the entire Health path is inert — readings are
+  still captured, viewed, and CloudKit-synced; they just aren't this device's job to write.
+- **The patient device is the single writer.** Rows entered on any device sync via CloudKit to
+  the patient device, whose sweep commits them and sets the CloudKit-synced `healthKitSynced`
+  flag — so the work lands exactly once, on the right store.
+- **Assumes a single Apple ID across the patient/caregiver devices** (our CloudKit private-DB
+  model). Supporting patient and caregiver as *separate* Apple IDs (CloudKit Sharing) is out of
+  scope. If the patient has no iOS device at all, Apple Health write is simply unavailable for
+  them — an inherent platform limit, not something we can engineer around.
 
 ### Deferred sync (grace window)
 
@@ -131,7 +157,8 @@ subsumes the retry/reconcile pass we'd otherwise defer.
   lost. Instead the commit is gated on a **stored timestamp**: *write any row where
   `healthKitSynced == false` and `now − createdAt ≥ graceWindow`.* This is the **unsynced
   sweep** — idempotent, re-runnable, and also the retry path for rows whose write previously
-  failed.
+  failed. The sweep's HealthKit commit is a **no-op unless `isPatientDevice`** (Patient-device
+  gate) — caregiver devices schedule nothing and write nothing to Health.
 - **Sweep triggers**, first-to-fire wins (the gate keeps it idempotent):
   1. **In-app timer** — best-effort while the app stays foregrounded.
   2. **Background-transition flush** — on `scenePhase → .background`, wrap a quick sweep in
@@ -149,9 +176,11 @@ subsumes the retry/reconcile pass we'd otherwise defer.
   direction for pushing our queued writes out, and it **requires read authorization**, which
   would collapse the write-only iCloud exemption. HealthKit has no native deferred-*write* API,
   so the delay must live app-side.
-- **Pending state.** Until committed, a row shows a subtle **"pending sync"** indicator. Pending
-  rows (`healthKitSynced == false`) delete cleanly with no Apple Health caveat (see Deletion);
-  the grace window maximizes that clean-delete window.
+- **Pending state.** On a **patient device**, an uncommitted row shows a subtle **"pending
+  sync"** indicator. On caregiver-only devices the indicator is hidden (Health isn't this
+  device's job, so "pending" would mislead). Pending rows (`healthKitSynced == false`) delete
+  cleanly with no Apple Health caveat (see Deletion); the grace window maximizes that
+  clean-delete window.
 
 ### Authorization & permissions
 
@@ -244,6 +273,9 @@ Seeded rows are local-only (`healthKitSynced = false`); seeding does not touch A
     succeeds (idempotent — already-synced rows are skipped, no double write).
   - the sweep is pure of UIKit/BGTask: lifecycle triggers just *call* it, so it tests without a
     device. `graceWindow` and the clock are injectable for deterministic tests (no real waiting).
+- **Patient-device gate:** with `isPatientDevice == false` the sweep neither authorizes nor
+  writes (no-op) even for aged rows; with it `true` the same rows commit. Capture still persists
+  locally in both cases.
 
 ## Deletion
 
@@ -279,9 +311,11 @@ Beta App Review — so review rules can bite at the TestFlight stage.
 
 Sleep Quality; editing readings; two-way Health sync; HealthKit read/Share access and its
 background delivery; precise/guaranteed background timing or silent-push delivery (BGTask is
-best-effort); charts/reporting (Session 5); onboarding & broader privacy strings (Session 7).
+best-effort); patient + caregiver on **separate Apple IDs** / CloudKit Sharing (single Apple ID
+assumed); charts/reporting (Session 5); onboarding & broader privacy strings (Session 7).
 
 ## Dogfood state
 
-A working Health tab: enter weight, water, BP, pulse, SpO₂; readings persist (and reach Apple
-Health on a real device with authorization granted).
+A working Health tab: enter weight, water, BP, pulse, SpO₂; readings persist and sync via
+CloudKit. On a device marked as the patient's (with authorization granted), readings also reach
+Apple Health after the grace window.
