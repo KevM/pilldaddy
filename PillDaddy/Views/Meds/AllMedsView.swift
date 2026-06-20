@@ -68,10 +68,10 @@ struct AllMedsView: View {
     }
 
     private func subtitle(_ med: Medication) -> String {
-        guard med.isActive else { return med.strength }
+        guard med.isActive else { return med.strengthDescription }
         let batches = (med.batchItems ?? []).compactMap { $0.batch?.name }.sorted()
         let suffix = batches.isEmpty ? "" : " · " + batches.joined(separator: ", ")
-        return med.strength + suffix
+        return med.strengthDescription + suffix
     }
 }
 

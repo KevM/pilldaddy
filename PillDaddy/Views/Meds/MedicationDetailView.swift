@@ -17,7 +17,7 @@ struct MedicationDetailView: View {
     var body: some View {
         List {
             Section {
-                LabeledContent("Strength", value: medication.strength)
+                LabeledContent("Strength", value: medication.strengthDescription)
                 LabeledContent("Form", value: medication.form)
                 if medication.isPRN {
                     Text("As needed (PRN)").foregroundStyle(.secondary)

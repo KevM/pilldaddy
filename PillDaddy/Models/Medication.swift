@@ -4,11 +4,13 @@ import SwiftData
 @Model
 final class Medication {
     var name: String = ""
-    var strength: String = ""          // free text, e.g. "30mg"
+    var strengthValue: Double = 0          // amount per unit, e.g. 30
+    var strengthUnit: String = "mg"        // label only; never converted across units
+    var dailyDoseTarget: Double = 1        // prescribed units per full dosing day (count)
     var form: String = "tablet"
     var generalNotes: String = ""
     var isActive: Bool = true
-    var isPRN: Bool = false            // as-needed; no batch memberships
+    var isPRN: Bool = false                // as-needed; no batch memberships
     var createdAt: Date = Date.now
     var discontinuedAt: Date? = nil
 
@@ -27,11 +29,17 @@ final class Medication {
     @Relationship(inverse: \Medication.successor)
     var predecessor: Medication? = nil
 
-    init(name: String = "", strength: String = "", form: String = "tablet",
+    /// Display-only formatted strength, e.g. "30 mg". Never used for math.
+    var strengthDescription: String { "\(DoseFormat.qty(strengthValue)) \(strengthUnit)" }
+
+    init(name: String = "", strengthValue: Double = 0, strengthUnit: String = "mg",
+         dailyDoseTarget: Double = 1, form: String = "tablet",
          generalNotes: String = "", isActive: Bool = true, isPRN: Bool = false,
          createdAt: Date = .now, discontinuedAt: Date? = nil) {
         self.name = name
-        self.strength = strength
+        self.strengthValue = strengthValue
+        self.strengthUnit = strengthUnit
+        self.dailyDoseTarget = dailyDoseTarget
         self.form = form
         self.generalNotes = generalNotes
         self.isActive = isActive

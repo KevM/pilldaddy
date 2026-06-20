@@ -20,9 +20,9 @@ struct MedicationServiceTests {
         context.insert(blue)
         context.insert(green)
 
-        let med = MedicationService.addMedication(
-            name: "Metoprolol", strength: "30mg", form: "tablet",
-            isPRN: false, notes: "",
+        let med = try MedicationService.addMedication(
+            name: "Metoprolol", strengthValue: 30, strengthUnit: "mg", form: "tablet",
+            isPRN: false, notes: "", dailyDoseTarget: 1.5,
             placements: [(batch: blue, quantity: 1.0), (batch: green, quantity: 0.5)],
             reason: "Started for hypertension", in: context)
 
@@ -39,9 +39,9 @@ struct MedicationServiceTests {
         let blue = Batch(name: "Blue")
         context.insert(blue)
 
-        let med = MedicationService.addMedication(
-            name: "Acetaminophen", strength: "500mg", form: "tablet",
-            isPRN: true, notes: "",
+        let med = try MedicationService.addMedication(
+            name: "Acetaminophen", strengthValue: 500, strengthUnit: "mg", form: "tablet",
+            isPRN: true, notes: "", dailyDoseTarget: 1.0,
             placements: [(batch: blue, quantity: 1.0)],
             reason: "", in: context)
 
@@ -54,33 +54,35 @@ struct MedicationServiceTests {
     func testChangeDoseMutatesQuantityAndWritesEvent() throws {
         let blue = Batch(name: "Blue")
         context.insert(blue)
-        let med = MedicationService.addMedication(
-            name: "Metoprolol", strength: "30mg", form: "tablet",
-            isPRN: false, notes: "",
+        let med = try MedicationService.addMedication(
+            name: "Metoprolol", strengthValue: 30, strengthUnit: "mg", form: "tablet",
+            isPRN: false, notes: "", dailyDoseTarget: 1.0,
             placements: [(batch: blue, quantity: 1.0)],
             reason: "", in: context)
         let item = try #require(med.batchItems?.first)
 
         try MedicationService.changeDose(
-            med, newStrength: "30mg",
+            med, newStrengthValue: 30, newStrengthUnit: "mg",
+            newDailyDoseTarget: 1.0,
             newQuantities: [(item: item, quantity: 0.5)],
             reason: "Reduced after dizziness", in: context)
 
         #expect(item.quantity == 0.5)
         let doseEvents = (med.changeEvents ?? []).filter { $0.eventType == MedChangeType.doseChanged.rawValue }
         #expect(doseEvents.count == 1)
-        #expect(doseEvents.first?.oldValue == "30mg — Blue 1")
-        #expect(doseEvents.first?.newValue == "30mg — Blue 0.5")
+        #expect(doseEvents.first?.oldValue == "30 mg — Blue 1")
+        #expect(doseEvents.first?.newValue == "30 mg — Blue 0.5")
     }
 
     @Test
     func testChangeDoseWithEmptyReasonThrows() throws {
-        let med = MedicationService.addMedication(
-            name: "Metoprolol", strength: "30mg", form: "tablet",
-            isPRN: false, notes: "", placements: [], reason: "", in: context)
+        let med = try MedicationService.addMedication(
+            name: "Metoprolol", strengthValue: 30, strengthUnit: "mg", form: "tablet",
+            isPRN: false, notes: "", dailyDoseTarget: 1.0, placements: [], reason: "", in: context)
 
         #expect(throws: MedicationServiceError.reasonRequired) {
-            try MedicationService.changeDose(med, newStrength: "15mg",
+            try MedicationService.changeDose(med, newStrengthValue: 15, newStrengthUnit: "mg",
+                newDailyDoseTarget: 1.0,
                 newQuantities: [], reason: "   ", in: context)
         }
     }
@@ -89,9 +91,9 @@ struct MedicationServiceTests {
     func testChangeInstructionsUpdatesItemAndWritesEvent() throws {
         let blue = Batch(name: "Blue")
         context.insert(blue)
-        let med = MedicationService.addMedication(
-            name: "Metoprolol", strength: "30mg", form: "tablet",
-            isPRN: false, notes: "",
+        let med = try MedicationService.addMedication(
+            name: "Metoprolol", strengthValue: 30, strengthUnit: "mg", form: "tablet",
+            isPRN: false, notes: "", dailyDoseTarget: 1.0,
             placements: [(batch: blue, quantity: 1.0)],
             reason: "", in: context)
         let item = try #require(med.batchItems?.first)
@@ -110,9 +112,9 @@ struct MedicationServiceTests {
     func testChangeInstructionsWithEmptyReasonThrows() throws {
         let blue = Batch(name: "Blue")
         context.insert(blue)
-        let med = MedicationService.addMedication(
-            name: "Metoprolol", strength: "30mg", form: "tablet",
-            isPRN: false, notes: "",
+        let med = try MedicationService.addMedication(
+            name: "Metoprolol", strengthValue: 30, strengthUnit: "mg", form: "tablet",
+            isPRN: false, notes: "", dailyDoseTarget: 1.0,
             placements: [(batch: blue, quantity: 1.0)], reason: "", in: context)
         let item = try #require(med.batchItems?.first)
 
@@ -127,14 +129,14 @@ struct MedicationServiceTests {
         let green = Batch(name: "Green")
         context.insert(blue)
         context.insert(green)
-        let old = MedicationService.addMedication(
-            name: "Metoprolol", strength: "30mg", form: "tablet",
-            isPRN: false, notes: "",
+        let old = try MedicationService.addMedication(
+            name: "Metoprolol", strengthValue: 30, strengthUnit: "mg", form: "tablet",
+            isPRN: false, notes: "", dailyDoseTarget: 1.5,
             placements: [(batch: blue, quantity: 1.0), (batch: green, quantity: 0.5)],
             reason: "", in: context)
 
         let new = try MedicationService.swap(
-            old, newName: "Bisoprolol", newStrength: "5mg", newForm: "tablet",
+            old, newName: "Bisoprolol", newStrengthValue: 5, newStrengthUnit: "mg", newForm: "tablet",
             inheritSchedule: true, reason: "Cardiologist switch", in: context)
 
         #expect(!old.isActive)
@@ -152,13 +154,13 @@ struct MedicationServiceTests {
     func testSwapWithoutInheritLeavesNewUnscheduled() throws {
         let blue = Batch(name: "Blue")
         context.insert(blue)
-        let old = MedicationService.addMedication(
-            name: "Metoprolol", strength: "30mg", form: "tablet",
-            isPRN: false, notes: "",
+        let old = try MedicationService.addMedication(
+            name: "Metoprolol", strengthValue: 30, strengthUnit: "mg", form: "tablet",
+            isPRN: false, notes: "", dailyDoseTarget: 1.0,
             placements: [(batch: blue, quantity: 1.0)], reason: "", in: context)
 
         let new = try MedicationService.swap(
-            old, newName: "Bisoprolol", newStrength: "5mg", newForm: "tablet",
+            old, newName: "Bisoprolol", newStrengthValue: 5, newStrengthUnit: "mg", newForm: "tablet",
             inheritSchedule: false, reason: "Switch", in: context)
 
         #expect(new.batchItems ?? [] == [])
@@ -167,12 +169,12 @@ struct MedicationServiceTests {
 
     @Test
     func testSwapWithEmptyReasonThrows() throws {
-        let old = MedicationService.addMedication(
-            name: "Metoprolol", strength: "30mg", form: "tablet",
-            isPRN: false, notes: "", placements: [], reason: "", in: context)
+        let old = try MedicationService.addMedication(
+            name: "Metoprolol", strengthValue: 30, strengthUnit: "mg", form: "tablet",
+            isPRN: false, notes: "", dailyDoseTarget: 1.0, placements: [], reason: "", in: context)
 
         #expect(throws: MedicationServiceError.reasonRequired) {
-            try MedicationService.swap(old, newName: "B", newStrength: "5mg",
+            try MedicationService.swap(old, newName: "B", newStrengthValue: 5, newStrengthUnit: "mg",
                 newForm: "tablet", inheritSchedule: true, reason: " ", in: context)
         }
     }
@@ -181,9 +183,9 @@ struct MedicationServiceTests {
     func testDiscontinueKeepsMembershipsAndMarksInactive() throws {
         let blue = Batch(name: "Blue")
         context.insert(blue)
-        let med = MedicationService.addMedication(
-            name: "Metoprolol", strength: "30mg", form: "tablet",
-            isPRN: false, notes: "",
+        let med = try MedicationService.addMedication(
+            name: "Metoprolol", strengthValue: 30, strengthUnit: "mg", form: "tablet",
+            isPRN: false, notes: "", dailyDoseTarget: 1.0,
             placements: [(batch: blue, quantity: 1.0)], reason: "", in: context)
 
         try MedicationService.discontinue(med, reason: "No longer needed", in: context)
@@ -196,9 +198,9 @@ struct MedicationServiceTests {
 
     @Test
     func testReactivateRestoresActiveState() throws {
-        let med = MedicationService.addMedication(
-            name: "Metoprolol", strength: "30mg", form: "tablet",
-            isPRN: false, notes: "", placements: [], reason: "", in: context)
+        let med = try MedicationService.addMedication(
+            name: "Metoprolol", strengthValue: 30, strengthUnit: "mg", form: "tablet",
+            isPRN: false, notes: "", dailyDoseTarget: 1.0, placements: [], reason: "", in: context)
         try MedicationService.discontinue(med, reason: "stop", in: context)
 
         try MedicationService.reactivate(med, reason: "Restarting", in: context)
@@ -210,9 +212,9 @@ struct MedicationServiceTests {
 
     @Test
     func testDiscontinueWithEmptyReasonThrows() throws {
-        let med = MedicationService.addMedication(
-            name: "Metoprolol", strength: "30mg", form: "tablet",
-            isPRN: false, notes: "", placements: [], reason: "", in: context)
+        let med = try MedicationService.addMedication(
+            name: "Metoprolol", strengthValue: 30, strengthUnit: "mg", form: "tablet",
+            isPRN: false, notes: "", dailyDoseTarget: 1.0, placements: [], reason: "", in: context)
 
         #expect(throws: MedicationServiceError.reasonRequired) {
             try MedicationService.discontinue(med, reason: "", in: context)
@@ -221,9 +223,9 @@ struct MedicationServiceTests {
 
     @Test
     func testAddNoteWritesNoteEvent() throws {
-        let med = MedicationService.addMedication(
-            name: "Metoprolol", strength: "30mg", form: "tablet",
-            isPRN: false, notes: "", placements: [], reason: "", in: context)
+        let med = try MedicationService.addMedication(
+            name: "Metoprolol", strengthValue: 30, strengthUnit: "mg", form: "tablet",
+            isPRN: false, notes: "", dailyDoseTarget: 1.0, placements: [], reason: "", in: context)
 
         try MedicationService.addNote(med, text: "Cardiologist confirmed dose at June visit", in: context)
 
@@ -234,9 +236,9 @@ struct MedicationServiceTests {
 
     @Test
     func testAddNoteWithEmptyTextThrowsAndWritesNothing() throws {
-        let med = MedicationService.addMedication(
-            name: "Metoprolol", strength: "30mg", form: "tablet",
-            isPRN: false, notes: "", placements: [], reason: "", in: context)
+        let med = try MedicationService.addMedication(
+            name: "Metoprolol", strengthValue: 30, strengthUnit: "mg", form: "tablet",
+            isPRN: false, notes: "", dailyDoseTarget: 1.0, placements: [], reason: "", in: context)
 
         #expect(throws: MedicationServiceError.reasonRequired) {
             try MedicationService.addNote(med, text: "   ", in: context)
@@ -244,6 +246,90 @@ struct MedicationServiceTests {
 
         let notes = (med.changeEvents ?? []).filter { $0.eventType == MedChangeType.note.rawValue }
         #expect(notes.count == 0)
+    }
+
+    @Test
+    func testAddToBatchWithinRemainingInserts() throws {
+        let blue = Batch(name: "Blue")
+        context.insert(blue)
+        let med = try MedicationService.addMedication(
+            name: "Metoprolol", strengthValue: 30, strengthUnit: "mg", form: "tablet",
+            isPRN: false, notes: "", dailyDoseTarget: 2,
+            placements: [], reason: "", in: context)
+
+        try MedicationService.addToBatch(med, blue, quantity: 1.5, in: context)
+
+        #expect(med.batchItems?.count == 1)
+        #expect(DoseAllocation.allocated(med) == 1.5)
+    }
+
+    @Test
+    func testAddToBatchExceedingRemainingThrows() throws {
+        let blue = Batch(name: "Blue")
+        context.insert(blue)
+        let med = try MedicationService.addMedication(
+            name: "Metoprolol", strengthValue: 30, strengthUnit: "mg", form: "tablet",
+            isPRN: false, notes: "", dailyDoseTarget: 1,
+            placements: [], reason: "", in: context)
+
+        #expect(throws: DoseAllocationError.exceedsDailyTarget) {
+            try MedicationService.addToBatch(med, blue, quantity: 1.5, in: context)
+        }
+        #expect(med.batchItems?.isEmpty == true)
+    }
+
+    @Test
+    func testChangeDoseRejectsResultingOverAllocation() throws {
+        let blue = Batch(name: "Blue")
+        context.insert(blue)
+        let med = try MedicationService.addMedication(
+            name: "Metoprolol", strengthValue: 30, strengthUnit: "mg", form: "tablet",
+            isPRN: false, notes: "", dailyDoseTarget: 1,
+            placements: [(batch: blue, quantity: 1.0)], reason: "", in: context)
+        let item = try #require(med.batchItems?.first)
+
+        #expect(throws: DoseAllocationError.exceedsDailyTarget) {
+            try MedicationService.changeDose(
+                med, newStrengthValue: 30, newStrengthUnit: "mg",
+                newDailyDoseTarget: 1,
+                newQuantities: [(item: item, quantity: 2.0)],
+                reason: "bump", in: context)
+        }
+    }
+
+    @Test
+    func testChangeDoseWithRaisedTargetPermitsNewAllocation() throws {
+        let blue = Batch(name: "Blue")
+        context.insert(blue)
+        let med = try MedicationService.addMedication(
+            name: "Metoprolol", strengthValue: 30, strengthUnit: "mg", form: "tablet",
+            isPRN: false, notes: "", dailyDoseTarget: 1,
+            placements: [(batch: blue, quantity: 1.0)], reason: "", in: context)
+        let item = try #require(med.batchItems?.first)
+
+        try MedicationService.changeDose(
+            med, newStrengthValue: 30, newStrengthUnit: "mg",
+            newDailyDoseTarget: 2,
+            newQuantities: [(item: item, quantity: 2.0)],
+            reason: "increase", in: context)
+
+        #expect(item.quantity == 2.0)
+        #expect(med.dailyDoseTarget == 2)
+    }
+
+    @Test
+    func testAddMedicationRejectsPlacementsOverTarget() throws {
+        let blue = Batch(name: "Blue")
+        let green = Batch(name: "Green")
+        context.insert(blue); context.insert(green)
+
+        #expect(throws: DoseAllocationError.exceedsDailyTarget) {
+            try MedicationService.addMedication(
+                name: "Metoprolol", strengthValue: 30, strengthUnit: "mg", form: "tablet",
+                isPRN: false, notes: "", dailyDoseTarget: 1,
+                placements: [(batch: blue, quantity: 1.0), (batch: green, quantity: 1.0)],
+                reason: "", in: context)
+        }
     }
 }
 

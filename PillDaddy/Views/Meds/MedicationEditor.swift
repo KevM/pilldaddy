@@ -18,7 +18,9 @@ struct MedicationEditor: View {
     private var batches: [Batch]
 
     @State private var name = ""
-    @State private var strength = ""
+    @State private var strengthValue = 0.0
+    @State private var strengthUnit = "mg"
+    @State private var dailyDoseTarget = 1.0
     @State private var form = "tablet"
     @State private var notes = ""
     @State private var isPRN = false
@@ -31,27 +33,50 @@ struct MedicationEditor: View {
         return false
     }
 
+    private var assignedTotal: Double {
+        selected.reduce(0.0) { $0 + (quantities[$1] ?? 1.0) }
+    }
+
+    private var saveBlocked: Bool {
+        guard isAdd, !isPRN else { return false }
+        return dailyDoseTarget <= 0 || assignedTotal > dailyDoseTarget
+    }
+
     var body: some View {
         NavigationStack {
             Form {
                 Section("Details") {
                     TextField("Name", text: $name)
                     if isAdd {
-                        TextField("Strength (e.g. 30mg)", text: $strength)
+                        HStack {
+                            TextField("Strength", value: $strengthValue, format: .number)
+                                .keyboardType(.decimalPad)
+                            TextField("Unit", text: $strengthUnit)
+                                .frame(maxWidth: 80)
+                        }
                     }
                     TextField("Form (e.g. tablet)", text: $form)
                     Toggle("As needed (PRN)", isOn: $isPRN)
+                    if isAdd && !isPRN {
+                        DoseQuantityField(title: "Doses per day", value: $dailyDoseTarget)
+                    }
                     TextField("General notes", text: $notes, axis: .vertical)
                 }
 
                 if isAdd && !isPRN {
-                    Section("Add to batches") {
+                    Section {
                         if batches.isEmpty {
                             Text("No batches yet — add one from the Meds tab.")
                                 .foregroundStyle(.secondary)
                         }
                         ForEach(batches) { batch in
                             batchAssignRow(batch)
+                        }
+                    } header: {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Add to batches")
+                            Text("\(DoseFormat.qty(assignedTotal)) of \(DoseFormat.qty(dailyDoseTarget))/day allocated (\(DoseFormat.qty(assignedTotal * strengthValue)) of \(DoseFormat.qty(dailyDoseTarget * strengthValue)) \(strengthUnit))")
+                                .font(.caption).foregroundStyle(.secondary)
                         }
                     }
                     Section("Why started? (optional)") {
@@ -66,7 +91,8 @@ struct MedicationEditor: View {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { save() }.disabled(name.isEmpty)
+                    Button("Save") { save() }
+                        .disabled(name.isEmpty || saveBlocked)
                 }
             }
             .onAppear(perform: load)
@@ -93,12 +119,13 @@ struct MedicationEditor: View {
                 }
             }
             if isOn {
-                Stepper(value: Binding(
-                    get: { quantities[id] ?? 1.0 },
-                    set: { quantities[id] = $0 }),
-                    in: 0.5...20, step: 0.5) {
-                    Text("Quantity: \(DoseFormat.qty(quantities[id] ?? 1.0))")
-                }
+                let current = quantities[id] ?? 1.0
+                let rowMax = max(0.5, dailyDoseTarget - (assignedTotal - current))
+                DoseQuantityField(
+                    title: "Quantity",
+                    value: Binding(get: { quantities[id] ?? 1.0 },
+                                   set: { quantities[id] = $0 }),
+                    range: 0.5...20, step: 0.5, max: rowMax)
             }
         }
     }
@@ -106,7 +133,8 @@ struct MedicationEditor: View {
     private func load() {
         guard case .edit(let med) = mode else { return }
         name = med.name
-        strength = med.strength
+        strengthValue = med.strengthValue
+        strengthUnit = med.strengthUnit
         form = med.form
         notes = med.generalNotes
         isPRN = med.isPRN
@@ -119,9 +147,9 @@ struct MedicationEditor: View {
                 batches
                     .filter { selected.contains($0.persistentModelID) }
                     .map { ($0, quantities[$0.persistentModelID] ?? 1.0) }
-            MedicationService.addMedication(
-                name: name, strength: strength, form: form,
-                isPRN: isPRN, notes: notes, placements: placements,
+            try? MedicationService.addMedication(
+                name: name, strengthValue: strengthValue, strengthUnit: strengthUnit, form: form,
+                isPRN: isPRN, notes: notes, dailyDoseTarget: dailyDoseTarget, placements: placements,
                 reason: reason, in: context)
         case .edit(let med):
             let wasScheduled = !(med.batchItems ?? []).isEmpty
@@ -137,10 +165,3 @@ struct MedicationEditor: View {
         dismiss()
     }
 }
-
-#if DEBUG
-#Preview {
-    MedicationEditor(mode: .add)
-        .modelContainer(PreviewSupport.seededContainer())
-}
-#endif
