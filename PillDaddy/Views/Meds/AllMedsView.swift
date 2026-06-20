@@ -55,6 +55,8 @@ struct AllMedsView: View {
                 tag("Discontinued")
             } else if med.isPRN {
                 tag("PRN")
+            } else {
+                DoseAllocationBadge(medication: med)
             }
         }
     }

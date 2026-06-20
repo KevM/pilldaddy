@@ -19,6 +19,7 @@ struct MedicationDetailView: View {
             Section {
                 LabeledContent("Strength", value: medication.strengthDescription)
                 LabeledContent("Form", value: medication.form)
+                DoseAllocationBadge(medication: medication, showCaption: true)
                 if medication.isPRN {
                     Text("As needed (PRN)").foregroundStyle(.secondary)
                 }

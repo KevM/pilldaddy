@@ -68,6 +68,7 @@ struct RegimeView: View {
                 Text(item.medication?.name ?? "—")
                 Text(item.medication?.strengthDescription ?? "")
                     .font(.caption).foregroundStyle(.secondary)
+                if let med = item.medication { DoseAllocationBadge(medication: med) }
             }
             Spacer()
             Text("\(DoseFormat.qty(item.quantity)) \(item.medication?.form ?? "")")
