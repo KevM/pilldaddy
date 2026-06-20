@@ -1,26 +1,22 @@
+import Foundation
 import SwiftData
-import XCTest
+import Testing
 @testable import PillDaddy
 
 @MainActor
-final class DoseLogServicePRNTests: XCTestCase {
+struct DoseLogServicePRNTests {
 
-    private var container: ModelContainer!
-    private var context: ModelContext!
+    private let container: ModelContainer
+    private let context: ModelContext
 
-    override func setUp() async throws {
-        try await super.setUp()
-        container = try ModelTestSupport.makeContainer()
-        context = container.mainContext
-    }
-
-    override func tearDown() async throws {
-        context = nil; container = nil
-        try await super.tearDown()
+    init() throws {
+        self.container = try ModelTestSupport.makeContainer()
+        self.context = container.mainContext
     }
 
     private func logs() throws -> [DoseLog] { try context.fetch(FetchDescriptor<DoseLog>()) }
 
+    @Test
     func testLogPRNCreatesBatchItemNilRowAndIsRepeatable() throws {
         let med = Medication(name: "Acetaminophen", strength: "500mg", isPRN: true)
         context.insert(med)
@@ -28,12 +24,13 @@ final class DoseLogServicePRNTests: XCTestCase {
         DoseLogService.logPRN(med, takenAt: .now, quantity: 1.0, note: "", in: context)
 
         let all = try logs()
-        XCTAssertEqual(all.count, 2)                  // each PRN dose is its own row
-        XCTAssertTrue(all.allSatisfy { $0.batchItem == nil })
-        XCTAssertEqual(all.first?.snapshotMedName, "Acetaminophen")
-        XCTAssertEqual(Set(all.map { $0.quantity }), [1.0, 2.0])
+        #expect(all.count == 2)                  // each PRN dose is its own row
+        #expect(all.allSatisfy { $0.batchItem == nil })
+        #expect(all.first?.snapshotMedName == "Acetaminophen")
+        #expect(Set(all.map { $0.quantity }) == [1.0, 2.0])
     }
 
+    @Test
     func testDeletePRNLogRemovesExactlyOne() throws {
         let med = Medication(name: "Acetaminophen", strength: "500mg", isPRN: true)
         context.insert(med)
@@ -41,6 +38,7 @@ final class DoseLogServicePRNTests: XCTestCase {
         DoseLogService.logPRN(med, takenAt: .now, quantity: 1.0, note: "", in: context)
 
         DoseLogService.deletePRNLog(first, in: context)
-        XCTAssertEqual(try logs().count, 1)
+        #expect(try logs().count == 1)
     }
 }
+

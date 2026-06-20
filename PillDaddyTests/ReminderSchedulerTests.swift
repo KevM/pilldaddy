@@ -1,23 +1,18 @@
+import Foundation
 import SwiftData
-import XCTest
+import Testing
 @testable import PillDaddy
 
 @MainActor
-final class ReminderSchedulerTests: XCTestCase {
+struct ReminderSchedulerTests {
 
-    private var container: ModelContainer!
-    private var context: ModelContext!
+    private let container: ModelContainer
+    private let context: ModelContext
     private var cal: Calendar { Calendar.current }
 
-    override func setUp() async throws {
-        try await super.setUp()
-        container = try ModelTestSupport.makeContainer()
-        context = container.mainContext
-    }
-
-    override func tearDown() async throws {
-        context = nil; container = nil
-        try await super.tearDown()
+    init() throws {
+        self.container = try ModelTestSupport.makeContainer()
+        self.context = container.mainContext
     }
 
     /// A daily batch at the given clock time with one active scheduled med.
@@ -40,44 +35,49 @@ final class ReminderSchedulerTests: XCTestCase {
         DayQuery.slotDate(for: batch, on: .now).addingTimeInterval(-3600)
     }
 
+    @Test
     func testDailyBatchEmitsHeadsUpDueAndThreeFollowUps() {
         let batch = makeBatch(hour: 9)
         let plan = ReminderScheduler.plan(
             batches: [batch], now: nowBefore(batch), horizonDays: 1,
             graceMinutes: 120, headsUpEnabled: true, masterEnabled: true)
         let kinds = plan.map(\.kind).sorted { $0.rawValue < $1.rawValue }
-        XCTAssertEqual(plan.count, 5)   // headsUp + due + 3 follow-ups (30/60/90)
-        XCTAssertEqual(kinds.filter { $0 == .headsUp }.count, 1)
-        XCTAssertEqual(kinds.filter { $0 == .due }.count, 1)
-        XCTAssertEqual(kinds.filter { $0 == .followUp }.count, 3)
+        #expect(plan.count == 5)   // headsUp + due + 3 follow-ups (30/60/90)
+        #expect(kinds.filter { $0 == .headsUp }.count == 1)
+        #expect(kinds.filter { $0 == .due }.count == 1)
+        #expect(kinds.filter { $0 == .followUp }.count == 3)
     }
 
+    @Test
     func testHeadsUpDisabledDropsHeadsUp() {
         let batch = makeBatch(hour: 9)
         let plan = ReminderScheduler.plan(
             batches: [batch], now: nowBefore(batch), horizonDays: 1,
             graceMinutes: 120, headsUpEnabled: false, masterEnabled: true)
-        XCTAssertFalse(plan.contains { $0.kind == .headsUp })
-        XCTAssertEqual(plan.count, 4)
+        #expect(!plan.contains { $0.kind == .headsUp })
+        #expect(plan.count == 4)
     }
 
+    @Test
     func testFollowUpsClippedToGraceWindow() {
         let batch = makeBatch(hour: 9)
         // 60-minute grace → only the +30 follow-up is strictly before the cutoff.
         let plan = ReminderScheduler.plan(
             batches: [batch], now: nowBefore(batch), horizonDays: 1,
             graceMinutes: 60, headsUpEnabled: true, masterEnabled: true)
-        XCTAssertEqual(plan.filter { $0.kind == .followUp }.count, 1)
+        #expect(plan.filter { $0.kind == .followUp }.count == 1)
     }
 
+    @Test
     func testMasterDisabledEmitsNothing() {
         let batch = makeBatch(hour: 9)
         let plan = ReminderScheduler.plan(
             batches: [batch], now: nowBefore(batch), horizonDays: 1,
             graceMinutes: 120, headsUpEnabled: true, masterEnabled: false)
-        XCTAssertTrue(plan.isEmpty)
+        #expect(plan.isEmpty)
     }
 
+    @Test
     func testPastFireDatesAreOmitted() {
         let batch = makeBatch(hour: 9)
         // now = slot + 40 min → headsUp, due, +30 are in the past; only +60, +90 remain.
@@ -85,10 +85,11 @@ final class ReminderSchedulerTests: XCTestCase {
         let plan = ReminderScheduler.plan(
             batches: [batch], now: now, horizonDays: 1,
             graceMinutes: 120, headsUpEnabled: true, masterEnabled: true)
-        XCTAssertTrue(plan.allSatisfy { $0.fireDate > now })
-        XCTAssertEqual(plan.filter { $0.kind == .followUp }.count, 2)
+        #expect(plan.allSatisfy { $0.fireDate > now })
+        #expect(plan.filter { $0.kind == .followUp }.count == 2)
     }
 
+    @Test
     func testWeekdayBatchAbsentOnExcludedDay() {
         let today = cal.component(.weekday, from: .now)
         let other = (today % 7) + 1   // a different weekday
@@ -96,9 +97,10 @@ final class ReminderSchedulerTests: XCTestCase {
         let plan = ReminderScheduler.plan(
             batches: [batch], now: nowBefore(batch), horizonDays: 1,
             graceMinutes: 120, headsUpEnabled: true, masterEnabled: true)
-        XCTAssertTrue(plan.isEmpty)
+        #expect(plan.isEmpty)
     }
 
+    @Test
     func testCompletedSlotIsSkipped() {
         let batch = makeBatch(hour: 9)
         let slot = DayQuery.slotDate(for: batch, on: .now)
@@ -107,24 +109,27 @@ final class ReminderSchedulerTests: XCTestCase {
             batches: [batch], now: nowBefore(batch), horizonDays: 1,
             graceMinutes: 120, headsUpEnabled: true, masterEnabled: true,
             completedSlots: [key])
-        XCTAssertTrue(plan.isEmpty)
+        #expect(plan.isEmpty)
     }
 
+    @Test
     func testRespectsLimit() {
         let batch = makeBatch(hour: 9)
         let plan = ReminderScheduler.plan(
             batches: [batch], now: nowBefore(batch), horizonDays: 1,
             graceMinutes: 120, headsUpEnabled: true, masterEnabled: true, limit: 2)
-        XCTAssertEqual(plan.count, 2)
+        #expect(plan.count == 2)
         // earliest fire dates kept
-        XCTAssertEqual(plan.map(\.fireDate), plan.map(\.fireDate).sorted { $0 < $1 })
+        #expect(plan.map(\.fireDate) == plan.map(\.fireDate).sorted { $0 < $1 })
     }
 
+    @Test
     func testIdentifiersAreUnique() {
         let batch = makeBatch(hour: 9)
         let plan = ReminderScheduler.plan(
             batches: [batch], now: nowBefore(batch), horizonDays: 1,
             graceMinutes: 120, headsUpEnabled: true, masterEnabled: true)
-        XCTAssertEqual(Set(plan.map(\.identifier)).count, plan.count)
+        #expect(Set(plan.map(\.identifier)).count == plan.count)
     }
 }
+
