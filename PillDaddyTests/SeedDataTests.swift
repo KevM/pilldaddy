@@ -56,5 +56,33 @@ final class SeedDataTests: XCTestCase {
         XCTAssertTrue(todays.contains { $0.status == DoseStatus.taken.rawValue })
         XCTAssertTrue(todays.contains { $0.status == DoseStatus.skipped.rawValue })
     }
+
+    func testSeedIncludesSwapChainWithContinuousJournal() throws {
+        let container = try ModelTestSupport.makeContainer()
+        let context = container.mainContext
+        SeedData.seedIfEmpty(context)
+        try context.save()
+
+        let atenolol = try XCTUnwrap(
+            try context.fetch(FetchDescriptor<Medication>(
+                predicate: #Predicate { $0.name == "Atenolol" })).first)
+        // Discontinued predecessor that was swapped to the active Metoprolol.
+        XCTAssertFalse(atenolol.isActive)
+        XCTAssertEqual(atenolol.successor?.name, "Metoprolol")
+
+        // The merged lineage timeline (anchored on the active Metoprolol) reads
+        // across both drugs and includes the swap and a free-form note.
+        let metoprolol = try XCTUnwrap(atenolol.successor)
+        let events = MedicationLineage.events(from: metoprolol)
+        let types = Set(events.map { $0.event.eventType })
+        XCTAssertTrue(types.contains(MedChangeType.swapped.rawValue))
+        XCTAssertTrue(types.contains(MedChangeType.note.rawValue))
+        // The swap-born Metoprolol's `added` is suppressed; the line's only
+        // `added` belongs to the root, Atenolol.
+        let addedOwners = events
+            .filter { $0.event.eventType == MedChangeType.added.rawValue }
+            .map { $0.owningMed.name }
+        XCTAssertEqual(addedOwners, ["Atenolol"])
+    }
 }
 

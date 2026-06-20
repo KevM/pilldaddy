@@ -43,12 +43,35 @@ enum SeedData {
         let acetaminophen = Medication(name: "Acetaminophen", strength: "500mg", isPRN: true)
         context.insert(acetaminophen)
 
-        // A bit of journal history on Metoprolol
+        // Continuity chain: Atenolol was the original beta blocker, swapped out
+        // for Metoprolol. The journal therefore spans both drugs so the
+        // lineage timeline has a real cross-drug story to show.
+        func daysAgo(_ days: Int) -> Date {
+            cal.date(byAdding: .day, value: -days, to: .now) ?? .now
+        }
+
+        let atenolol = Medication(name: "Atenolol", strength: "25mg",
+                                  isActive: false, discontinuedAt: daysAgo(100))
+        context.insert(atenolol)
+        atenolol.successor = metoprolol   // links predecessor on Metoprolol too
+
         context.insert(MedicationChangeEvent(
-            type: .added, reasoning: "Started for hypertension", medication: metoprolol))
+            timestamp: daysAgo(150), type: .added,
+            reasoning: "Started for hypertension after the January check-up",
+            medication: atenolol))
         context.insert(MedicationChangeEvent(
-            type: .doseChanged, reasoning: "Reduced evening dose after dizziness",
+            timestamp: daysAgo(100), type: .swapped,
+            reasoning: "Persistent cold hands; switched to a more selective blocker",
+            oldValue: "Atenolol 25mg", newValue: "Metoprolol 30mg",
+            medication: atenolol))
+        context.insert(MedicationChangeEvent(
+            timestamp: daysAgo(30), type: .doseChanged,
+            reasoning: "Reduced evening dose after dizziness",
             oldValue: "1 tablet", newValue: "½ tablet", medication: metoprolol))
+        context.insert(MedicationChangeEvent(
+            timestamp: daysAgo(5), type: .note,
+            reasoning: "Cardiologist confirmed dose at June visit — keep as is",
+            medication: metoprolol))
 
         // Today's logging: Blue batch partially logged (Metoprolol taken, Vitamin D
         // skipped), one PRN dose taken. Green batch left pending.
