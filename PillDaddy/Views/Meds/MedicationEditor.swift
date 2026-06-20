@@ -27,6 +27,7 @@ struct MedicationEditor: View {
     @State private var reason = ""
     @State private var selected: Set<PersistentIdentifier> = []
     @State private var quantities: [PersistentIdentifier: Double] = [:]
+    @State private var errorMessage: String?
 
     private var isAdd: Bool {
         if case .add = mode { return true }
@@ -39,7 +40,7 @@ struct MedicationEditor: View {
 
     private var saveBlocked: Bool {
         guard isAdd, !isPRN else { return false }
-        return dailyDoseTarget <= 0 || assignedTotal > dailyDoseTarget
+        return dailyDoseTarget <= 0 || DoseAllocation.isOverTarget(allocated: assignedTotal, target: dailyDoseTarget)
     }
 
     var body: some View {
@@ -96,6 +97,16 @@ struct MedicationEditor: View {
                 }
             }
             .onAppear(perform: load)
+            .alert("Cannot Save", isPresented: Binding(
+                get: { errorMessage != nil },
+                set: { if !$0 { errorMessage = nil } }
+            )) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                if let errorMessage {
+                    Text(errorMessage)
+                }
+            }
         }
     }
 
@@ -147,10 +158,15 @@ struct MedicationEditor: View {
                 batches
                     .filter { selected.contains($0.persistentModelID) }
                     .map { ($0, quantities[$0.persistentModelID] ?? 1.0) }
-            try? MedicationService.addMedication(
-                name: name, strengthValue: strengthValue, strengthUnit: strengthUnit, form: form,
-                isPRN: isPRN, notes: notes, dailyDoseTarget: dailyDoseTarget, placements: placements,
-                reason: reason, in: context)
+            do {
+                try MedicationService.addMedication(
+                    name: name, strengthValue: strengthValue, strengthUnit: strengthUnit, form: form,
+                    isPRN: isPRN, notes: notes, dailyDoseTarget: dailyDoseTarget, placements: placements,
+                    reason: reason, in: context)
+                dismiss()
+            } catch {
+                errorMessage = errorMessage(for: error)
+            }
         case .edit(let med):
             let wasScheduled = !(med.batchItems ?? []).isEmpty
             med.name = name
@@ -158,10 +174,36 @@ struct MedicationEditor: View {
             med.generalNotes = notes
             if isPRN && wasScheduled {
                 for item in med.batchItems ?? [] { context.delete(item) }
+                context.insert(MedicationChangeEvent(
+                    type: .doseChanged,
+                    reasoning: "Converted medication to PRN (cleared scheduled batches)",
+                    medication: med
+                ))
             }
             med.isPRN = isPRN
-            try? context.save()
+            do {
+                try context.save()
+                dismiss()
+            } catch {
+                errorMessage = error.localizedDescription
+            }
         }
-        dismiss()
+    }
+
+    private func errorMessage(for error: Error) -> String {
+        if let doseError = error as? DoseAllocationError {
+            switch doseError {
+            case .exceedsDailyTarget:
+                return "Total allocation across batches cannot exceed the daily dose target."
+            }
+        }
+        return error.localizedDescription
     }
 }
+
+#if DEBUG
+#Preview {
+    MedicationEditor(mode: .add)
+        .modelContainer(PreviewSupport.seededContainer())
+}
+#endif

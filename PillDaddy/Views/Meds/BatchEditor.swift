@@ -26,6 +26,7 @@ struct BatchEditor: View {
     @State private var addingMed: Medication?
     @State private var addQuantity = 1.0
     @State private var editingMed: Medication?
+    @State private var errorMessage: String?
 
     var body: some View {
         NavigationStack {
@@ -104,10 +105,26 @@ struct BatchEditor: View {
                         }
                         ToolbarItem(placement: .confirmationAction) {
                             Button("Add") {
-                                if let batch { try? MedicationService.addToBatch(med, batch, quantity: addQuantity, in: context) }
-                                addingMed = nil
+                                do {
+                                    if let batch {
+                                        try MedicationService.addToBatch(med, batch, quantity: addQuantity, in: context)
+                                    }
+                                    addingMed = nil
+                                } catch {
+                                    errorMessage = errorMessage(for: error)
+                                }
                             }
                             .disabled(addQuantity > DoseAllocation.remaining(med))
+                        }
+                    }
+                    .alert("Cannot Add", isPresented: Binding(
+                        get: { errorMessage != nil },
+                        set: { if !$0 { errorMessage = nil } }
+                    )) {
+                        Button("OK", role: .cancel) {}
+                    } message: {
+                        if let errorMessage {
+                            Text(errorMessage)
                         }
                     }
                 }
@@ -191,6 +208,16 @@ struct BatchEditor: View {
         target.weekdays = recurrence == .weekdays ? weekdays.sorted() : nil
         try? context.save()
         dismiss()
+    }
+
+    private func errorMessage(for error: Error) -> String {
+        if let doseError = error as? DoseAllocationError {
+            switch doseError {
+            case .exceedsDailyTarget:
+                return "Total allocation across batches cannot exceed the daily dose target."
+            }
+        }
+        return error.localizedDescription
     }
 }
 

@@ -17,10 +17,16 @@ enum DoseAllocation {
         max(0, med.dailyDoseTarget - allocated(med))
     }
 
+    static let tolerance = 0.0001
+
+    static func isOverTarget(allocated: Double, target: Double) -> Bool {
+        allocated > target + tolerance
+    }
+
     static func status(_ med: Medication) -> Status {
         let a = allocated(med)
-        if a < med.dailyDoseTarget { return .under }
-        if a > med.dailyDoseTarget { return .over }
+        if isOverTarget(allocated: a, target: med.dailyDoseTarget) { return .over }
+        if a < med.dailyDoseTarget - tolerance { return .under }
         return .full
     }
 

@@ -26,7 +26,9 @@ enum MedicationService {
     ) throws -> Medication {
         if !isPRN {
             let total = placements.reduce(0) { $0 + $1.quantity }
-            if total > dailyDoseTarget { throw DoseAllocationError.exceedsDailyTarget }
+            if DoseAllocation.isOverTarget(allocated: total, target: dailyDoseTarget) {
+                throw DoseAllocationError.exceedsDailyTarget
+            }
         }
         let med = Medication(name: name, strengthValue: strengthValue, strengthUnit: strengthUnit,
                              dailyDoseTarget: dailyDoseTarget, form: form,
@@ -63,7 +65,9 @@ enum MedicationService {
         let prospective = (med.batchItems ?? []).reduce(0.0) { sum, item in
             sum + (overrides[item.persistentModelID] ?? item.quantity)
         }
-        if prospective > newDailyDoseTarget { throw DoseAllocationError.exceedsDailyTarget }
+        if DoseAllocation.isOverTarget(allocated: prospective, target: newDailyDoseTarget) {
+            throw DoseAllocationError.exceedsDailyTarget
+        }
 
         let oldSummary = doseSummary(med)
         med.strengthValue = newStrengthValue
@@ -86,7 +90,7 @@ enum MedicationService {
         _ med: Medication, _ batch: Batch, quantity: Double,
         in context: ModelContext
     ) throws {
-        if quantity > DoseAllocation.remaining(med) {
+        if DoseAllocation.isOverTarget(allocated: DoseAllocation.allocated(med) + quantity, target: med.dailyDoseTarget) {
             throw DoseAllocationError.exceedsDailyTarget
         }
         context.insert(BatchItem(quantity: quantity, medication: med, batch: batch))
