@@ -22,6 +22,8 @@ not a new screen), keeping all metrics in a single session.
 | Health subject | **Assume the app runs on the patient's primary iPhone** | HealthKit is device-local/single-subject: a write lands in the *device owner's* Health record. For MVP we don't detect device role; onboarding (Session 7) instructs the user to install on the patient's own iPhone so writes are correctly the patient's. A caregiver-proxy model is deferred — see Future work. |
 | Editing | **Add / view / delete**, no edit | Delete + re-add covers correction. YAGNI. Delete is guarded by a confirmation disclosure (see Deletion). |
 | Units | **US customary** (Weight = lb, Water = fl oz) | BP = mmHg, Pulse = bpm, SpO₂ = % are fixed. HealthKit stores canonical units and converts. Units are a **single seam** (see Localization readiness) so switching to metric later is contained. |
+| Input cues | **Advisory green/yellow/red cues** on entry, never blocking | Color-cue values against clinical ranges (BP, pulse, SpO₂) or plausibility (water). A red reading is still **saveable** — it's valid data. Separate from a hard plausibility bound. Weight has no clinical cue. See Validation & clinical cues. |
+| Water entry | **Quick-add chips** (+8 / +12 / +16 / +32 oz) | Water is additive; chips beat typing. Other scalars (Weight) are a plain number. |
 | Location | Existing **Health** tab (Session 0 stub, tag 3) | No new tab; replaces the "Coming soon" placeholder. |
 
 ## Architecture
@@ -58,6 +60,8 @@ final class HealthMetric {
 static registry keyed by kind. Declares everything the UI and the writer need:
 
 ```swift
+enum MetricCue { case normal, caution, alert }   // → green / yellow / red (advisory)
+
 struct MetricDefinition {
     let kind: MetricKind
     let displayName: String          // "Blood Pressure"
@@ -65,8 +69,10 @@ struct MetricDefinition {
     let captureGroup: CaptureGroup   // .scalar | .vitals
     let unit: String                 // "lb", "fl oz", "mmHg", "bpm", "%"
     let secondaryUnit: String?       // "mmHg" for BP; nil otherwise
-    let validRange: ClosedRange<Double>
-    let secondaryRange: ClosedRange<Double>?
+    let plausibleRange: ClosedRange<Double>          // hard bound — outside = reject save (typo)
+    let secondaryPlausibleRange: ClosedRange<Double>?
+    let quickAdd: [Double]?          // [8,12,16,32] for water; nil otherwise
+    let cue: (_ value: Double, _ secondary: Double?) -> MetricCue   // advisory; nil-cue metrics return .normal
     let healthKit: HealthKitMapping  // how to compose the HK sample(s)
 }
 ```
@@ -83,18 +89,44 @@ therefore a contained change — swap the definition's display unit and add conv
 formatter — with no data migration, since HealthKit already holds canonical values and historic
 rows carry their own `unit`. We ship US customary now; we do not build runtime unit selection.
 
+**Validation & clinical cues.** Two distinct layers, both declared in the registry:
+
+1. **Hard plausibility bound** (`plausibleRange`) — rejects physically-impossible/typo input
+   (e.g. SpO₂ > 100, negative weight). This is the only thing that blocks a save.
+2. **Advisory cue** (`cue`) — a `normal/caution/alert` → green/yellow/red signal shown live on
+   the value. It **never blocks saving**: a hypertensive-crisis BP is exactly the reading a
+   caregiver needs to record. The cue replaces the old "expected range" hint.
+
+Thresholds (advisory only — **not medical advice**; this reinforces the Session 7 medical
+disclaimer):
+
+| Metric | 🟢 normal | 🟡 caution | 🔴 alert |
+|--------|-----------|-----------|---------|
+| Blood pressure (worse of sys/dia) | <120 **and** <80 | 120–179 **or** 80–119 (incl. low: <90/<60) | ≥180 **or** ≥120 |
+| Pulse (bpm) | 60–100 | 50–59 or 101–120 | <50 or >120 |
+| SpO₂ (%) | 95–100 | 91–94 | ≤90 |
+| Water (oz, per entry — plausibility) | ≤32 | 33–64 | >64 |
+| Weight | — (no clinical cue; plausibility bound only) | | |
+
+BP source: ACC/AHA 2017 categories; cue = the more severe of the systolic/diastolic
+classifications. Low-BP (hypotension) folded into caution. All thresholds are constants in the
+registry, so they're the single place to tune and the single thing tests assert.
+
 ### 2. Capture UI (Health tab)
 
 - **`HealthView`** replaces the placeholder: a list of recent `HealthMetric` rows (sorted by
   `recordedAt` desc), delete (guarded by a confirmation disclosure — see **Deletion**), and a
-  "+" that presents a chooser → Scalar or Vitals.
+  "+" that presents a **3-way chooser** — Weight, Water, or Vitals (BP · pulse · SpO₂). Weight
+  and Water both route to `ScalarCaptureView`; Vitals to `VitalsCaptureView`.
 - **`ScalarCaptureView(kind:)`** — Weight and Water. One numeric field, label/unit from the
-  definition, range-validated. On save: one `HealthMetric` persisted locally, then a best-effort
-  HealthKit write.
+  definition. The value carries its live **cue color** (Water; Weight has none). For Water the
+  definition's `quickAdd` chips (+8/+12/+16/+32 oz) add to the running amount. On save: one
+  `HealthMetric` persisted locally, then a best-effort HealthKit write.
   Water is additive (each entry is its own reading); Weight is a snapshot. Same form; the
   difference is only how Session 5 reporting aggregates them later.
 - **`VitalsCaptureView`** — one screen with four optional fields: systolic, diastolic, pulse,
-  SpO₂. You fill what you measured. On save it writes only the present values:
+  SpO₂, each showing its live cue color. You fill what you measured. On save it writes only the
+  present values:
   - systolic **and** diastolic present → one `bloodPressure` `HealthMetric` (`value`=systolic,
     `secondaryValue`=diastolic). Both-or-neither: one without the other is a validation error.
   - pulse present → one `pulse` `HealthMetric`.
@@ -190,16 +222,22 @@ Seeded rows are local-only (`healthKitSynced = false`); seeding does not touch A
 
 ## Error handling
 
-- **Range validation** in capture, from the definition; inline field errors. BP enforces
-  both-or-neither.
+- **Plausibility** (the only blocker) from `plausibleRange`; inline field error blocks save for
+  impossible/typo values. BP enforces both-or-neither.
+- **Clinical cues** are advisory only — green/yellow/red on the value; **never block save**, so a
+  dangerous-but-real reading is always recordable.
 - **HealthKit unavailable / denied / save failure:** silent to the flow — the row persists with
   `healthKitSynced = false`. A subtle per-row "not synced to Health" indicator surfaces it. No
   automatic retry in the MVP (re-sync is Future work); the user can delete + re-add if needed.
 
 ## Testing
 
-- **Registry:** every `MetricKind` has a definition with sane unit/range/HK mapping.
-- **Validation:** range checks; BP both-or-neither; rejects out-of-range.
+- **Registry:** every `MetricKind` has a definition with sane unit/plausible-range/HK mapping.
+- **Plausibility:** rejects out-of-`plausibleRange`; BP both-or-neither.
+- **Clinical cues (table-driven):** assert each metric's `cue` at the boundary values from the
+  thresholds table — e.g. BP 119/79 → normal, 120/79 & 152/96 → caution, 180/100 & 130/120 →
+  alert (worse-of-the-two), low 88/58 → caution; pulse 60/100 normal vs 49/121 alert; SpO₂ 95
+  normal, 94 caution, 90 alert; water 32 normal, 33 caution, 65 alert. Cues never reject.
 - **Mapping (pure):** `map(HealthMetric)` produces the correct HK type, unit, and value
   (incl. BP → correlation of two samples). No live store needed.
 - **Capture → persist → write:** with a fake writer —
