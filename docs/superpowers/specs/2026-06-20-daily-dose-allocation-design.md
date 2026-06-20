@@ -63,6 +63,19 @@ var strengthDescription: String { "\(DoseFormat.qty(strengthValue)) \(strengthUn
 - **`DoseLog.snapshotStrength`** stays a `String`; feed it `med.strengthDescription` at capture time (historical snapshots are unaffected by the model split).
 - **Constructors / `init`** → take `strengthValue` + `strengthUnit` instead of `strength`. Seed data and tests update accordingly (e.g. `strengthValue: 30, strengthUnit: "mg"`).
 
+### DoseLog numeric strength capture (forward-compat for historic dosage totals)
+
+To make "how much medicine the patient received" computable later (a deferred reporting feature — see Out of Scope), `DoseLog` must freeze the **numeric** strength at log time, since a med's `strengthValue` can be edited afterward. The frozen string alone can't be relied on for math once strength is structured.
+
+`DoseLog.swift` gains two additive fields:
+
+```swift
+var snapshotStrengthValue: Double = 0
+var snapshotStrengthUnit: String = "mg"
+```
+
+`DoseLogService` populates them (alongside the existing `snapshotStrength` string) wherever a log is created — from `med.strengthValue` / `med.strengthUnit` at capture time. **No display is built in this spec**; this is data capture only, so the future feature has accurate history back to this change. Per-dose medicine received = `snapshotStrengthValue × quantity`.
+
 ## Logic Core — `Services/DoseAllocation.swift`
 
 The single source of truth. No consumer recomputes allocation independently.
@@ -151,6 +164,7 @@ Surfaced in: `AllMedsView` rows, `RegimeView` rows, and the `MedicationDetailVie
   - `changeDose` with a raised `newDailyDoseTarget` permits the new allocation.
   - `addMedication` rejects placements summing over the target.
   - Existing tests updated to the new `strengthValue` / `strengthUnit` constructors.
+- **`DoseLogServiceTests`** — a created log freezes `snapshotStrengthValue` / `snapshotStrengthUnit` from the med at capture time, and they remain unchanged after the med's `strengthValue` is later edited.
 
 ## Out of Scope
 
@@ -159,6 +173,7 @@ Surfaced in: `AllMedsView` rows, `RegimeView` rows, and the `MedicationDetailVie
 - Cap *override* for exceptional regimens — manual entry is precision-only; the count cap always holds.
 - Entering the daily-dose target in strength units (caregiver enters counts; mg is derived).
 - Data migration of existing free-text strengths (manual fixup; old data dropped).
+- **Displaying** historic dosage totals (mg received) on log/history surfaces — deferred to **Session 5 (Reporting)**. This spec only captures the numeric data (`DoseLog.snapshotStrengthValue` / `snapshotStrengthUnit`) needed to build it accurately later.
 - Any change to PRN dosing behavior.
 
 ## Decisions Captured

@@ -106,6 +106,11 @@ history stay continuous across substitutions.
 Historic doses per drug, with a toggle between "when taken" and "when not taken" views.
 **Open question:** the cut-off "Present" line in the README — likely report
 presentation/printing/sharing; resolve during this session's brainstorm.
+**Deferred from the daily-dose-allocation work (2026-06-20):** display **total medicine received**
+(e.g. *"1.5 tablets · 45 mg"*) on dose-log / history surfaces. The numeric data needed is already
+captured per dose (`DoseLog.snapshotStrengthValue` / `snapshotStrengthUnit`); only the presentation
+remains — decide per-dose vs. per-day rollups and how PRN / partial / missed doses are summarized.
+See [`2026-06-20-daily-dose-allocation-design.md`](2026-06-20-daily-dose-allocation-design.md).
 **Dogfood state:** Useful once dose history has accumulated.
 
 ### Session 6 — Health metrics + HealthKit
