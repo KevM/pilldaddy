@@ -61,8 +61,16 @@ next to `RegimeQuery`. No `ModelContext` needed — it traverses the in-memory
 
 ## `MedicationTimelineView` — the screen
 
-A `List`-based screen pushed from `MedicationDetailView`. Renders the merged stream from
-`MedicationLineage.events(from:)`.
+A `List`-based screen **pushed** (`NavigationLink`) onto the same `NavigationStack` that already
+hosts `MedicationDetailView` — a standard back-navigable screen, not a sheet. Renders the merged
+stream from `MedicationLineage.events(from:)`. Presentation path:
+
+```
+RegimeView / AllMedsView
+  → (push) MedicationDetailView
+      → (push) MedicationTimelineView   — "See full history" NavigationLink
+          → (sheet) add-note editor      — toolbar "+"
+```
 
 Each row shows (reusing the detail view's existing `eventTitle` mapping and row content):
 
@@ -92,8 +100,10 @@ Empty state mirrors the detail view's current "No history yet."
   `MedicationServiceError.reasonRequired` on empty / whitespace-only input), inserts
   `MedicationChangeEvent(type: .note, reasoning: text, medication: med)`, and saves. Atomic single
   save, consistent with the other mutations.
-- Entry point: an **"Add note"** affordance on `MedicationTimelineView` (a toolbar `+`). The note
-  attaches to the **anchor** med and appears immediately at the top of the stream.
+- Entry point: an **"Add note"** affordance on `MedicationTimelineView` (a toolbar `+`). It presents
+  a small **`.sheet`** — a text field plus Save/Cancel — matching the existing
+  `ChangeDoseSheet` / `LifecycleReasonSheet` pattern (commit-or-cancel input). On save it calls
+  `addNote` on the **anchor** med; the note appears immediately at the top of the stream.
 
 ## Testing
 
