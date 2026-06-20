@@ -1,6 +1,9 @@
 import Foundation
 import SwiftData
 
+/// Aggregate Apple Health authorization across all metric kinds.
+enum HealthAuthState: Equatable { case unavailable, notDetermined, authorized, partial, denied }
+
 /// Owns capture (persist-then-best-effort-write), deletion, and cue-context
 /// assembly. Persist always succeeds locally; the HealthKit write is best-effort.
 @MainActor
@@ -78,6 +81,46 @@ enum HealthMetricService {
         default:
             return CueContext(previousValue: nil, previousDate: nil, todayTotal: nil, now: now)
         }
+    }
+
+    /// Number of locally-saved readings not yet written to Apple Health.
+    static func pendingCount(in context: ModelContext) -> Int {
+        let fd = FetchDescriptor<HealthMetric>(predicate: #Predicate { $0.healthKitSynced == false })
+        return (try? context.fetchCount(fd)) ?? 0
+    }
+
+    /// Aggregate authorization across every kind.
+    static func overallAuthorization(writer: HealthKitWriting) -> HealthAuthState {
+        guard writer.isHealthDataAvailable else { return .unavailable }
+        let statuses = MetricKind.allCases.map { writer.authorizationStatus(for: $0) }
+        if statuses.allSatisfy({ $0 == .authorized }) { return .authorized }
+        if statuses.allSatisfy({ $0 == .denied }) { return .denied }
+        if statuses.allSatisfy({ $0 == .notDetermined }) { return .notDetermined }
+        return .partial
+    }
+
+    /// Catch-up write of previously-unsynced rows whose kind is now authorized.
+    /// Does not request authorization (no prompt side-effects) and creates no
+    /// duplicates — these rows were never written. Returns the count newly synced.
+    @discardableResult
+    static func resyncPending(writer: HealthKitWriting, in context: ModelContext) async -> Int {
+        guard writer.isHealthDataAvailable else { return 0 }
+        let fd = FetchDescriptor<HealthMetric>(predicate: #Predicate { $0.healthKitSynced == false })
+        let pending = (try? context.fetch(fd)) ?? []
+        var synced = 0
+        for row in pending where writer.authorizationStatus(for: row.metricKind) == .authorized {
+            let objects = HealthSampleMapper.map(row)
+            do {
+                try await writer.save(objects)
+                row.healthKitSynced = true
+                row.healthKitSampleUUID = objects.first?.uuid.uuidString
+                synced += 1
+            } catch {
+                // Leave it pending; a later foreground or manual sync can retry.
+            }
+        }
+        if synced > 0 { try? context.save() }
+        return synced
     }
 
     private static func commit(_ metric: HealthMetric, writer: HealthKitWriting,
