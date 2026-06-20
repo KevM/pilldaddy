@@ -19,7 +19,7 @@ not a new screen), keeping all metrics in a single session.
 | Model | **One generic `HealthMetric`** with an optional `secondaryValue` | A single table is simplest for SwiftData/CloudKit and for Session 5 reporting. `secondaryValue` exists solely so Blood Pressure (120/80) is one row, not two loose paired rows. |
 | Capture surfaces | **Two:** generic *Scalar* + specialized *Vitals* | Five values, but only two capture experiences. |
 | HealthKit sync | **One-way write only**, fire-and-forget | Two-way sync explicitly out of scope (per README/roadmap). |
-| Editing | **Add / view / delete**, no edit | Delete + re-add covers correction. YAGNI. |
+| Editing | **Add / view / delete**, no edit | Delete + re-add covers correction. YAGNI. Delete is guarded by a confirmation disclosure (see Deletion). |
 | Units | **US customary** (Weight = lb, Water = fl oz) | BP = mmHg, Pulse = bpm, SpO₂ = % are fixed. HealthKit stores canonical units and converts. Units are a **single seam** (see Localization readiness) so switching to metric later is contained. |
 | Location | Existing **Health** tab (Session 0 stub, tag 3) | No new tab; replaces the "Coming soon" placeholder. |
 
@@ -85,7 +85,8 @@ rows carry their own `unit`. We ship US customary now; we do not build runtime u
 ### 2. Capture UI (Health tab)
 
 - **`HealthView`** replaces the placeholder: a list of recent `HealthMetric` rows (sorted by
-  `recordedAt` desc), swipe-to-delete, and a "+" that presents a chooser → Scalar or Vitals.
+  `recordedAt` desc), delete (guarded by a confirmation disclosure — see **Deletion**), and a
+  "+" that presents a chooser → Scalar or Vitals.
 - **`ScalarCaptureView(kind:)`** — Weight and Water. One numeric field, label/unit from the
   definition, range-validated. On save: one `HealthMetric` + HealthKit write.
   Water is additive (each entry is its own reading); Weight is a snapshot. Same form; the
@@ -191,6 +192,22 @@ Seeded rows are local-only (`healthKitSynced = false`); seeding does not touch A
   (incl. BP → correlation of two samples). No live store needed.
 - **Capture → persist:** saving inserts the expected `HealthMetric` row(s); Vitals writes only
   the present fields; HK denial still persists locally (fake writer that throws).
+
+## Deletion
+
+Deleting a reading is destructive and asymmetric with our write-only model, so it is **guarded
+by a confirmation disclosure** rather than a bare swipe-delete:
+
+- Every delete prompts for confirmation (a destructive-action alert).
+- When the row was written to Apple Health (`healthKitSynced == true`), the confirmation
+  **discloses that the reading will remain in Apple Health** and must be removed there manually
+  (Health app). We intentionally do **not** delete from HealthKit — that would require
+  read/Share access and break the write-only iCloud exemption (see App Store considerations).
+- The delete removes only the local SwiftData/CloudKit `HealthMetric` row. Unsynced rows
+  (`healthKitSynced == false`) get the same confirmation without the Apple Health caveat.
+
+Add a test that the disclosure copy is driven by `healthKitSynced`, and that delete removes the
+local row only.
 
 ## App Store / TestFlight considerations
 
