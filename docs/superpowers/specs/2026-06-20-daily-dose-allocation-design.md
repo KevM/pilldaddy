@@ -100,12 +100,12 @@ The cap lives in the mutation layer so it is unit-testable and authoritative; th
 
 ### Reusable input — `DoseQuantityField`
 
-One component used everywhere a tablet count or the daily-dose target is entered (MedicationEditor add, BatchEditor add-prompt, ChangeDoseSheet, and the daily-dose target field). It pairs:
+One component used everywhere a tablet count or the daily-dose target is entered (MedicationEditor add, BatchEditor add-prompt, ChangeDoseSheet, and the daily-dose target field). It has two modes, toggled by a small per-row **disclosure**:
 
-- a **stepper** for quick `0.5` nudges, and
-- a **typed decimal field** (numeric keypad) for exact fractions (`0.75`, `1.25`) — the "manual entry of pill ratio" escape hatch for weaning/transition cases.
+- **Stepper mode (default):** a stepper for quick `0.5` nudges, with a trailing `› Exact` disclosure control. This is what the caregiver sees almost always.
+- **Manual mode (opt-in):** tapping `› Exact` swaps the stepper for a **typed decimal field** (numeric keypad) for exact fractions (`0.75`, `1.25`) — the "manual entry of pill ratio" escape hatch for weaning/transition cases. A `‹ Steps` control swaps back.
 
-Manual entry affects **precision only**; the `≤` count cap still applies. Typed values exceeding the cap show an inline note and block Save. This component also collapses the three near-identical stepper implementations that exist today (`MedicationEditor`, `ChangeDoseSheet`, add-mode rows) into one place.
+The component keeps a single bound `Double`, so switching modes never loses or rounds the current value (a `1.25` entered manually still shows in stepper mode; nudging from there moves by `0.5`). Manual entry affects **precision only**; the `≤` count cap still applies in both modes — typed values exceeding the cap show an inline note and block Save. The default mode is stepper; manual mode is per-field local UI state and does not persist. This component also collapses the three near-identical stepper implementations that exist today (`MedicationEditor`, `ChangeDoseSheet`, add-mode rows) into one place.
 
 ### Strength input
 
