@@ -109,9 +109,12 @@ presentation/printing/sharing; resolve during this session's brainstorm.
 **Dogfood state:** Useful once dose history has accumulated.
 
 ### Session 6 — Health metrics + HealthKit
-**Depends on:** 0 (independent track)
-Capture Blood Pressure, Pulse / SpO₂, Weight, Water Intake, Sleep Quality. One-way write to
-Apple Health (HealthKit). Two-way sync explicitly out of scope for now.
+**Depends on:** 0 (independent track — may be built ahead of Session 5)
+Capture **Blood Pressure, Pulse / SpO₂, Weight, Water Intake** via a generic `HealthMetric`
+model + metric-definition registry and two capture surfaces (scalar + vitals). One-way write to
+Apple Health (HealthKit). **Sleep Quality dropped** (subjective, no clean Health mapping);
+two-way sync out of scope. See
+[`2026-06-19-session-6-health-metrics-design.md`](2026-06-19-session-6-health-metrics-design.md).
 **Dogfood state:** Adds metric tracking that flows to Apple Health.
 
 ### Session 7 — Polish & TestFlight *(later)*
