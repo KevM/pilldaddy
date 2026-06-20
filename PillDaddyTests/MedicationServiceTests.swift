@@ -215,4 +215,29 @@ final class MedicationServiceTests: XCTestCase {
             try MedicationService.discontinue(med, reason: "", in: context)
         ) { XCTAssertEqual($0 as? MedicationServiceError, .reasonRequired) }
     }
+
+    func testAddNoteWritesNoteEvent() throws {
+        let med = MedicationService.addMedication(
+            name: "Metoprolol", strength: "30mg", form: "tablet",
+            isPRN: false, notes: "", placements: [], reason: "", in: context)
+
+        try MedicationService.addNote(med, text: "Cardiologist confirmed dose at June visit", in: context)
+
+        let notes = (med.changeEvents ?? []).filter { $0.eventType == MedChangeType.note.rawValue }
+        XCTAssertEqual(notes.count, 1)
+        XCTAssertEqual(notes.first?.reasoning, "Cardiologist confirmed dose at June visit")
+    }
+
+    func testAddNoteWithEmptyTextThrowsAndWritesNothing() throws {
+        let med = MedicationService.addMedication(
+            name: "Metoprolol", strength: "30mg", form: "tablet",
+            isPRN: false, notes: "", placements: [], reason: "", in: context)
+
+        XCTAssertThrowsError(
+            try MedicationService.addNote(med, text: "   ", in: context)
+        ) { XCTAssertEqual($0 as? MedicationServiceError, .reasonRequired) }
+
+        let notes = (med.changeEvents ?? []).filter { $0.eventType == MedChangeType.note.rawValue }
+        XCTAssertEqual(notes.count, 0)
+    }
 }

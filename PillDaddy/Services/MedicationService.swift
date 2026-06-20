@@ -136,6 +136,14 @@ enum MedicationService {
         try context.save()
     }
 
+    /// Appends a free-form retrospective note to a medication's journal as a
+    /// `note` event. Note text is required (empty/whitespace rejected).
+    static func addNote(_ med: Medication, text: String, in context: ModelContext) throws {
+        try requireReason(text)
+        context.insert(MedicationChangeEvent(type: .note, reasoning: text, medication: med))
+        try context.save()
+    }
+
      // MARK: - Internal helpers
 
     /// Human-readable summary of a med's current dose, deterministic (sorted by batch name).
