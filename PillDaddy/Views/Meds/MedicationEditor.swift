@@ -76,8 +76,10 @@ struct MedicationEditor: View {
                     } header: {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Add to batches")
+                            let isOver = DoseAllocation.isOverTarget(allocated: assignedTotal, target: dailyDoseTarget)
                             Text("\(DoseFormat.qty(assignedTotal)) of \(DoseFormat.qty(dailyDoseTarget))/day allocated (\(DoseFormat.qty(assignedTotal * strengthValue)) of \(DoseFormat.qty(dailyDoseTarget * strengthValue)) \(strengthUnit))")
-                                .font(.caption).foregroundStyle(.secondary)
+                                .font(.caption)
+                                .foregroundStyle(isOver ? .red : .secondary)
                         }
                     }
                     Section("Why started? (optional)") {
@@ -130,13 +132,11 @@ struct MedicationEditor: View {
                 }
             }
             if isOn {
-                let current = quantities[id] ?? 1.0
-                let rowMax = max(0.5, dailyDoseTarget - (assignedTotal - current))
                 DoseQuantityField(
                     title: "Quantity",
                     value: Binding(get: { quantities[id] ?? 1.0 },
                                    set: { quantities[id] = $0 }),
-                    range: 0.5...20, step: 0.5, max: rowMax)
+                    range: 0.5...20, step: 0.5)
             }
         }
     }
