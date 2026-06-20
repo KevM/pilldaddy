@@ -40,5 +40,28 @@ jobs:
 
       - name: Build and Test
         run: |
-          xcodebuild -scheme PillDaddy -destination "platform=iOS Simulator,name=iPhone 17 Pro" test -quiet
+          DEVICE_NAME=$(python3 -c '
+          import json, subprocess
+          try:
+              output = subprocess.check_output(["xcrun", "simctl", "list", "devices", "-j"])
+              data = json.loads(output)
+              found_device = None
+              runtimes = sorted(data.get("devices", {}).keys(), reverse=True)
+              for runtime in runtimes:
+                  if "iOS" not in runtime: continue
+                  devices = data["devices"][runtime]
+                  for d in devices:
+                      if d.get("isAvailable", True) and d.get("availabilityError") is None and "iPhone" in d.get("name", ""):
+                          found_device = d
+                          break
+                  if found_device: break
+              if found_device:
+                  print(found_device["name"])
+              else:
+                  print("iPhone 17 Pro")
+          except Exception:
+              print("iPhone 17 Pro")
+          ')
+          echo "Selected Device: $DEVICE_NAME"
+          xcodebuild -scheme PillDaddy -destination "platform=iOS Simulator,name=$DEVICE_NAME" test -quiet
 
