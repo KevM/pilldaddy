@@ -22,7 +22,7 @@ not a new screen), keeping all metrics in a single session.
 | Health subject | **Assume the app runs on the patient's primary iPhone** | HealthKit is device-local/single-subject: a write lands in the *device owner's* Health record. For MVP we don't detect device role; onboarding (Session 7) instructs the user to install on the patient's own iPhone so writes are correctly the patient's. A caregiver-proxy model is deferred — see Future work. |
 | Editing | **Add / view / delete**, no edit | Delete + re-add covers correction. YAGNI. Delete is guarded by a confirmation disclosure (see Deletion). |
 | Units | **US customary** (Weight = lb, Water = fl oz) | BP = mmHg, Pulse = bpm, SpO₂ = % are fixed. HealthKit stores canonical units and converts. Units are a **single seam** (see Localization readiness) so switching to metric later is contained. |
-| Input cues | **Advisory green/yellow/red cues** on entry, never blocking | Color-cue values against clinical ranges (BP, pulse, SpO₂) or plausibility (water). A red reading is still **saveable** — it's valid data. Separate from a hard plausibility bound. Weight has no clinical cue. See Validation & clinical cues. |
+| Input cues | **Advisory green/yellow/red cues** on entry, never blocking | Color-cue values against clinical ranges (BP, pulse, SpO₂), plausibility (water), or change vs the previous reading (weight Δ). A red reading is still **saveable** — it's valid data. Separate from a hard plausibility bound. See Validation & clinical cues. |
 | Water entry | **Quick-add chips** (+8 / +12 / +16 / +32 oz) | Water is additive; chips beat typing. Other scalars (Weight) are a plain number. |
 | Location | Existing **Health** tab (Session 0 stub, tag 3) | No new tab; replaces the "Coming soon" placeholder. |
 
@@ -62,6 +62,12 @@ static registry keyed by kind. Declares everything the UI and the writer need:
 ```swift
 enum MetricCue { case normal, caution, alert }   // → green / yellow / red (advisory)
 
+struct CueContext {              // history for contextual cues (weight); absolute cues ignore it
+    let previousValue: Double?   // latest prior reading of the same kind
+    let previousDate: Date?
+    let now: Date
+}
+
 struct MetricDefinition {
     let kind: MetricKind
     let displayName: String          // "Blood Pressure"
@@ -72,7 +78,7 @@ struct MetricDefinition {
     let plausibleRange: ClosedRange<Double>          // hard bound — outside = reject save (typo)
     let secondaryPlausibleRange: ClosedRange<Double>?
     let quickAdd: [Double]?          // [8,12,16,32] for water; nil otherwise
-    let cue: (_ value: Double, _ secondary: Double?) -> MetricCue   // advisory; nil-cue metrics return .normal
+    let cue: (_ value: Double, _ secondary: Double?, _ ctx: CueContext) -> MetricCue   // advisory
     let healthKit: HealthKitMapping  // how to compose the HK sample(s)
 }
 ```
@@ -102,15 +108,20 @@ disclaimer):
 
 | Metric | 🟢 normal | 🟡 caution | 🔴 alert |
 |--------|-----------|-----------|---------|
-| Blood pressure (worse of sys/dia) | <120 **and** <80 | 120–179 **or** 80–119 (incl. low: <90/<60) | ≥180 **or** ≥120 |
+| BP systolic (mmHg) | 90–119 | 80–89 or 120–179 | <80 or ≥180 |
+| BP diastolic (mmHg) | 60–79 | 40–59 or 80–119 | <40 or ≥120 |
 | Pulse (bpm) | 60–100 | 50–59 or 101–120 | <50 or >120 |
 | SpO₂ (%) | 95–100 | 91–94 | ≤90 |
 | Water (oz, per entry — plausibility) | ≤32 | 33–64 | >64 |
-| Weight | — (no clinical cue; plausibility bound only) | | |
+| Weight Δ vs previous (gain *or* loss) | <3 lb | ≥3 lb within ≤7 d | ≥5 lb within ≤7 d, or ≥2 lb within ≤1 d |
 
-BP source: ACC/AHA 2017 categories; cue = the more severe of the systolic/diastolic
-classifications. Low-BP (hypotension) folded into caution. All thresholds are constants in the
-registry, so they're the single place to tune and the single thing tests assert.
+- **BP** (ACC/AHA 2017 categories + symmetric hypotension bands): overall cue = **the more
+  severe of the systolic/diastolic** classifications, so a low diastolic alone can drive the cue.
+- **Weight** is the one **contextual** cue: it compares against the latest prior weight via
+  `CueContext` (heart-failure daily-weight rule, applied to gain *and* loss). No prior reading →
+  `.normal`. Absolute-cue metrics ignore `CueContext`.
+- All thresholds are constants in the registry — the single place to tune and the single thing
+  tests assert.
 
 ### 2. Capture UI (Health tab)
 
@@ -119,9 +130,10 @@ registry, so they're the single place to tune and the single thing tests assert.
   "+" that presents a **3-way chooser** — Weight, Water, or Vitals (BP · pulse · SpO₂). Weight
   and Water both route to `ScalarCaptureView`; Vitals to `VitalsCaptureView`.
 - **`ScalarCaptureView(kind:)`** — Weight and Water. One numeric field, label/unit from the
-  definition. The value carries its live **cue color** (Water; Weight has none). For Water the
-  definition's `quickAdd` chips (+8/+12/+16/+32 oz) add to the running amount. On save: one
-  `HealthMetric` persisted locally, then a best-effort HealthKit write.
+  definition; the value carries its live **cue color**. For Water the definition's `quickAdd`
+  chips (+8/+12/+16/+32 oz) add to the running amount. For Weight the screen loads the latest
+  prior weight to build the `CueContext` and shows the change (e.g. "▲ 4 lb since Jun 17") in the
+  cue color. On save: one `HealthMetric` persisted locally, then a best-effort HealthKit write.
   Water is additive (each entry is its own reading); Weight is a snapshot. Same form; the
   difference is only how Session 5 reporting aggregates them later.
 - **`VitalsCaptureView`** — one screen with four optional fields: systolic, diastolic, pulse,
@@ -235,9 +247,12 @@ Seeded rows are local-only (`healthKitSynced = false`); seeding does not touch A
 - **Registry:** every `MetricKind` has a definition with sane unit/plausible-range/HK mapping.
 - **Plausibility:** rejects out-of-`plausibleRange`; BP both-or-neither.
 - **Clinical cues (table-driven):** assert each metric's `cue` at the boundary values from the
-  thresholds table — e.g. BP 119/79 → normal, 120/79 & 152/96 → caution, 180/100 & 130/120 →
-  alert (worse-of-the-two), low 88/58 → caution; pulse 60/100 normal vs 49/121 alert; SpO₂ 95
-  normal, 94 caution, 90 alert; water 32 normal, 33 caution, 65 alert. Cues never reject.
+  thresholds table — BP worse-of-the-two: 110/75 → normal, 120/78 & 110/95 → caution, 185/78 &
+  150/125 → alert, low 88/58 → caution, low-diastolic-only 120/38 → alert; pulse 60/100 normal
+  vs 49/121 alert; SpO₂ 95 normal, 94 caution, 90 alert; water 32 normal, 33 caution, 65 alert.
+- **Weight delta cue (contextual):** with a `CueContext` — no prior → normal; +2 lb over 3 d →
+  normal; +3 lb over 5 d → caution; −5 lb over 4 d → alert; +2 lb over 1 d → alert. (Loss cues
+  the same as gain.) Cues never reject.
 - **Mapping (pure):** `map(HealthMetric)` produces the correct HK type, unit, and value
   (incl. BP → correlation of two samples). No live store needed.
 - **Capture → persist → write:** with a fake writer —
