@@ -23,6 +23,10 @@ struct BatchEditor: View {
     @State private var recurrence = RecurrenceKind.daily
     @State private var weekdays: Set<Int> = []
 
+    @State private var addingMed: Medication?
+    @State private var addQuantity = 1.0
+    @State private var editingMed: Medication?
+
     var body: some View {
         NavigationStack {
             Form {
@@ -45,12 +49,17 @@ struct BatchEditor: View {
                 if let batch {
                     Section("Pills in this batch") {
                         ForEach(activeItems) { item in
-                            HStack {
-                                Text(item.medication?.name ?? "—")
-                                Spacer()
-                                Text("\(DoseFormat.qty(item.quantity)) \(item.medication?.form ?? "")")
-                                    .foregroundStyle(.secondary)
+                            Button {
+                                editingMed = item.medication
+                            } label: {
+                                HStack {
+                                    Text(item.medication?.name ?? "—")
+                                    Spacer()
+                                    Text("\(DoseFormat.qty(item.quantity)) \(item.medication?.form ?? "")")
+                                        .foregroundStyle(.secondary)
+                                }
                             }
+                            .buttonStyle(.plain)
                         }
                         .onDelete { offsets in
                             for index in offsets { context.delete(activeItems[index]) }
@@ -59,9 +68,10 @@ struct BatchEditor: View {
                         Menu("Add medication") {
                             ForEach(addableMeds(to: batch)) { med in
                                 Button(med.name) {
-                                    context.insert(BatchItem(quantity: 1.0, medication: med, batch: batch))
-                                    try? context.save()
+                                    addingMed = med
+                                    addQuantity = min(1.0, max(0.5, DoseAllocation.remaining(med)))
                                 }
+                                .disabled(DoseAllocation.remaining(med) <= 0)
                             }
                         }
                     }
@@ -76,6 +86,35 @@ struct BatchEditor: View {
                 }
             }
             .onAppear(perform: load)
+            .sheet(item: $addingMed) { med in
+                NavigationStack {
+                    Form {
+                        DoseQuantityField(
+                            title: "Quantity", value: $addQuantity,
+                            range: 0.5...20, step: 0.5,
+                            max: DoseAllocation.remaining(med))
+                        Text("\(DoseFormat.qty(DoseAllocation.remaining(med))) of \(DoseFormat.qty(med.dailyDoseTarget))/day remaining")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    .navigationTitle("Add \(med.name)")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Cancel") { addingMed = nil }
+                        }
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Add") {
+                                if let batch { try? MedicationService.addToBatch(med, batch, quantity: addQuantity, in: context) }
+                                addingMed = nil
+                            }
+                            .disabled(addQuantity > DoseAllocation.remaining(med))
+                        }
+                    }
+                }
+            }
+            .sheet(item: $editingMed) { med in
+                ChangeDoseSheet(medication: med)
+            }
         }
     }
 
