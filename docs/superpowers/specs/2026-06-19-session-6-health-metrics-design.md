@@ -135,7 +135,10 @@ disclaimer):
 - **`HealthView`** replaces the placeholder: a list of recent `HealthMetric` rows (sorted by
   `recordedAt` desc), delete (guarded by a confirmation disclosure — see **Deletion**), and a
   "+" that presents a **3-way chooser** — Water, Weight, or Vitals (BP · pulse · SpO₂). Water
-  and Weight both route to `ScalarCaptureView`; Vitals to `VitalsCaptureView`.
+  and Weight both route to `ScalarCaptureView`; Vitals to `VitalsCaptureView`. Rows that didn't
+  reach Apple Health (`healthKitSynced == false`) carry a subtle **not-synced icon** (e.g.
+  `cloud-off`); synced rows are **unmarked** to avoid clutter — only the exception is flagged.
+  Tapping the icon explains it (denied/unavailable; re-add to retry).
 - **`ScalarCaptureView(kind:)`** — Weight and Water. One numeric field, label/unit from the
   definition; the value carries its live **cue color**. For Water the definition's `quickAdd`
   chips (+8/+12/+16 oz) add to this entry, plus a **Custom amount** entry prefilled to
@@ -248,8 +251,9 @@ Seeded rows are local-only (`healthKitSynced = false`); seeding does not touch A
 - **Clinical cues** are advisory only — green/yellow/red on the value; **never block save**, so a
   dangerous-but-real reading is always recordable.
 - **HealthKit unavailable / denied / save failure:** silent to the flow — the row persists with
-  `healthKitSynced = false`. A subtle per-row "not synced to Health" indicator surfaces it. No
-  automatic retry in the MVP (re-sync is Future work); the user can delete + re-add if needed.
+  `healthKitSynced = false`. Only these unsynced rows get the subtle not-synced icon in the list
+  (synced rows are unmarked, so no clutter). No automatic retry in the MVP (re-sync is Future
+  work); the user can delete + re-add if needed.
 
 ## Testing
 
