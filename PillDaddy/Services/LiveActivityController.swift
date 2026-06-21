@@ -49,7 +49,7 @@ enum LiveActivityController {
     /// and is not fully logged.
     private static func focusBatch(batches: [Batch], now: Date, grace: TimeInterval) -> Batch? {
         DayQuery.batchDays(from: batches, on: now)
-            .filter { $0.state != .taken }
+            .filter { !$0.isCompleted }
             .filter { now >= $0.slotDate && now < $0.slotDate.addingTimeInterval(grace) }
             .min { $0.slotDate < $1.slotDate }?
             .batch

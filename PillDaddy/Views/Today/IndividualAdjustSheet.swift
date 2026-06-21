@@ -11,7 +11,7 @@ struct IndividualAdjustSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     enum Choice: String, CaseIterable, Identifiable {
-        case clear = "—", taken = "Taken", skip = "Skip"
+        case clear = "—", taken = "Taken", skip = "Skip", missed = "Missed"
         var id: String { rawValue }
     }
 
@@ -76,6 +76,7 @@ struct IndividualAdjustSheet: View {
             switch dose.log?.status {
             case DoseStatus.taken.rawValue: choices[dose.id] = .taken
             case DoseStatus.skipped.rawValue: choices[dose.id] = .skip
+            case DoseStatus.missed.rawValue: choices[dose.id] = .missed
             default: choices[dose.id] = .clear
             }
         }
@@ -91,6 +92,9 @@ struct IndividualAdjustSheet: View {
                 case .skip:
                     try DoseLogService.logMed(dose.item, on: day, status: .skipped,
                                                takenAt: nil, note: note, in: context)
+                case .missed:
+                    try DoseLogService.logMed(dose.item, on: day, status: .missed,
+                                               takenAt: nil, note: "", in: context)
                 case .clear:
                     DoseLogService.revert(dose.item, on: day, in: context)
                 }

@@ -52,6 +52,9 @@ struct BatchLogCard: View {
         Group {
             switch batchDay.state {
             case .taken: Label("Taken", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+            case .skipped: Label("Skipped", systemImage: "xmark.circle.fill").foregroundStyle(.orange)
+            case .missed: Label("Missed", systemImage: "exclamationmark.circle.fill").foregroundStyle(.secondary)
+            case .completed: Label("Completed", systemImage: "checkmark.circle").foregroundStyle(.secondary)
             case .partial: Text("Partial").foregroundStyle(.orange)
             case .pending: Text("Pending").foregroundStyle(.secondary)
             }
@@ -65,6 +68,8 @@ struct BatchLogCard: View {
             Image(systemName: "checkmark.circle.fill").foregroundStyle(.green).font(.caption)
         case DoseStatus.skipped.rawValue:
             Image(systemName: "xmark.circle.fill").foregroundStyle(.orange).font(.caption)
+        case DoseStatus.missed.rawValue:
+            Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.red).font(.caption)
         default:
             Image(systemName: "circle").foregroundStyle(.secondary).font(.caption)
         }
@@ -72,7 +77,7 @@ struct BatchLogCard: View {
 
     @ViewBuilder private var actionButtons: some View {
         VStack(spacing: 8) {
-            if batchDay.state != .taken {
+            if !batchDay.isCompleted {
                 Button("Mark all taken", action: onMarkAllTaken)
                     .buttonStyle(.borderedProminent).frame(maxWidth: .infinity)
             }

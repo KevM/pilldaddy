@@ -22,6 +22,9 @@ struct BatchTakenConfirmSheet: View {
     private var skipped: [DayQuery.MedDose] {
         batchDay.meds.filter { $0.log?.status == DoseStatus.skipped.rawValue }
     }
+    private var missed: [DayQuery.MedDose] {
+        batchDay.meds.filter { $0.log?.status == DoseStatus.missed.rawValue }
+    }
 
     var body: some View {
         NavigationStack {
@@ -52,6 +55,22 @@ struct BatchTakenConfirmSheet: View {
                                         if let n = dose.log?.notes, !n.isEmpty {
                                             Text(n).font(.caption).foregroundStyle(.secondary)
                                         }
+                                    }
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+                if !missed.isEmpty {
+                    Section("Missed — tap to take instead") {
+                        ForEach(missed) { dose in
+                            Button { toggleFlip(dose) } label: {
+                                HStack {
+                                    Image(systemName: flipped.contains(dose.id)
+                                          ? "checkmark.circle.fill" : "circle")
+                                    VStack(alignment: .leading) {
+                                        Text(dose.item.medication?.name ?? "—")
                                     }
                                 }
                             }
@@ -92,7 +111,7 @@ struct BatchTakenConfirmSheet: View {
     }
 
     private func confirm() {
-        let fill = unlogged.map(\.item) + skipped.filter { flipped.contains($0.id) }.map(\.item)
+        let fill = unlogged.map(\.item) + skipped.filter { flipped.contains($0.id) }.map(\.item) + missed.filter { flipped.contains($0.id) }.map(\.item)
         DoseLogService.logBatchTaken(batchDay.batch, on: day, items: fill,
                                      takenAt: takenAt, note: note, in: context)
         dismiss()

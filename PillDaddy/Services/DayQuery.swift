@@ -7,7 +7,7 @@ import SwiftData
 @MainActor
 enum DayQuery {
 
-    enum BatchState { case pending, partial, taken }
+    enum BatchState { case pending, partial, taken, skipped, missed, completed }
 
     /// One scheduled med on a day, paired with its existing log (if any).
     struct MedDose: Identifiable {
@@ -23,9 +23,23 @@ enum DayQuery {
         let meds: [MedDose]
         var id: PersistentIdentifier { batch.persistentModelID }
         var state: BatchState {
-            let logged = meds.filter { $0.log != nil }.count
-            if logged == 0 { return .pending }
-            return logged == meds.count ? .taken : .partial
+            let loggedCount = meds.filter { $0.log != nil }.count
+            if loggedCount == 0 { return .pending }
+            if loggedCount < meds.count { return .partial }
+            
+            let statuses = Set(meds.compactMap { $0.log?.status })
+            if statuses == [DoseStatus.taken.rawValue] {
+                return .taken
+            } else if statuses == [DoseStatus.skipped.rawValue] {
+                return .skipped
+            } else if statuses == [DoseStatus.missed.rawValue] {
+                return .missed
+            } else {
+                return .completed
+            }
+        }
+        var isCompleted: Bool {
+            meds.allSatisfy { $0.log != nil }
         }
     }
 

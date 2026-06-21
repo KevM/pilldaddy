@@ -101,14 +101,14 @@ enum ReminderScheduler {
                        fireDate: fire, kind: kind, title: title, body: body)
     }
 
-    /// Keys for batch slots in the horizon that are already fully logged (state == .taken),
+    /// Keys for batch slots in the horizon that are already fully logged (isCompleted),
     /// so the scheduler can skip pestering for them.
     static func completedSlotKeys(batches: [Batch], now: Date, horizonDays: Int) -> Set<String> {
         let cal = Calendar.current
         var keys: Set<String> = []
         for offset in 0..<max(horizonDays, 0) {
             guard let day = cal.date(byAdding: .day, value: offset, to: now) else { continue }
-            for bd in DayQuery.batchDays(from: batches, on: day) where bd.state == .taken {
+            for bd in DayQuery.batchDays(from: batches, on: day) where bd.isCompleted {
                 keys.insert(slotKey(batchUUID: bd.batch.uuid.uuidString, slot: bd.slotDate))
             }
         }

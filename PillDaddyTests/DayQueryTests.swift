@@ -154,5 +154,70 @@ struct DayQueryTests {
         let totalLogs = result.reduce(0) { $0 + $1.logs.count }
         #expect(totalLogs == 1)                       // only the genuine PRN log
     }
+
+    @Test
+    func testBatchDayStateAndIsCompletedAllStatuses() throws {
+        let blue = Batch(name: "Blue", timeOfDay: .now, sortOrder: 0)
+        context.insert(blue)
+        let medA = try MedicationService.addMedication(
+            name: "A", strengthValue: 1, strengthUnit: "mg", form: "tablet", isPRN: false, notes: "",
+            placements: [(batch: blue, quantity: 1.0)], reason: "", in: context)
+        let medB = try MedicationService.addMedication(
+            name: "B", strengthValue: 1, strengthUnit: "mg", form: "tablet", isPRN: false, notes: "",
+            placements: [(batch: blue, quantity: 1.0)], reason: "", in: context)
+        let itemA = try #require((blue.items ?? []).first { $0.medication?.name == "A" })
+        let itemB = try #require((blue.items ?? []).first { $0.medication?.name == "B" })
+
+        // 1. Pending (no logs)
+        var days = DayQuery.batchDays(from: try fetchBatches(), on: .now)
+        var day = try #require(days.first)
+        #expect(day.state == .pending)
+        #expect(!day.isCompleted)
+
+        // 2. Partial (only A logged)
+        let logA = DoseLog(scheduledDate: .now, status: .taken, medication: itemA.medication, batchItem: itemA)
+        context.insert(logA)
+        try context.save()
+        days = DayQuery.batchDays(from: try fetchBatches(), on: .now)
+        day = try #require(days.first)
+        #expect(day.state == .partial)
+        #expect(!day.isCompleted)
+
+        // 3. Taken (both taken)
+        let logB = DoseLog(scheduledDate: .now, status: .taken, medication: itemB.medication, batchItem: itemB)
+        context.insert(logB)
+        try context.save()
+        days = DayQuery.batchDays(from: try fetchBatches(), on: .now)
+        day = try #require(days.first)
+        #expect(day.state == .taken)
+        #expect(day.isCompleted)
+
+        // 4. Skipped (both skipped)
+        logA.status = DoseStatus.skipped.rawValue
+        logB.status = DoseStatus.skipped.rawValue
+        try context.save()
+        days = DayQuery.batchDays(from: try fetchBatches(), on: .now)
+        day = try #require(days.first)
+        #expect(day.state == .skipped)
+        #expect(day.isCompleted)
+
+        // 5. Missed (both missed)
+        logA.status = DoseStatus.missed.rawValue
+        logB.status = DoseStatus.missed.rawValue
+        try context.save()
+        days = DayQuery.batchDays(from: try fetchBatches(), on: .now)
+        day = try #require(days.first)
+        #expect(day.state == .missed)
+        #expect(day.isCompleted)
+
+        // 6. Completed/Mixed (A taken, B skipped)
+        logA.status = DoseStatus.taken.rawValue
+        logB.status = DoseStatus.skipped.rawValue
+        try context.save()
+        days = DayQuery.batchDays(from: try fetchBatches(), on: .now)
+        day = try #require(days.first)
+        #expect(day.state == .completed)
+        #expect(day.isCompleted)
+    }
 }
 

@@ -25,7 +25,7 @@ struct TodayView: View {
         return DayQuery.prnDoses(from: prnMeds, on: selectedDay)
     }
     private var isToday: Bool { Calendar.current.isDate(selectedDay, inSameDayAs: .now) }
-    private var doneCount: Int { batchDays.filter { $0.state == .taken }.count }
+    private var doneCount: Int { batchDays.filter { $0.isCompleted }.count }
 
     var body: some View {
         NavigationStack {
@@ -100,7 +100,7 @@ struct TodayView: View {
         guard isToday else { expandedID = nil; return }
         let now = Date.now
         expandedID = batchDays
-            .filter { $0.state != .taken }
+            .filter { !$0.isCompleted }
             .min { abs($0.slotDate.timeIntervalSince(now)) < abs($1.slotDate.timeIntervalSince(now)) }?
             .id
     }
