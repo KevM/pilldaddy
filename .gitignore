@@ -5,3 +5,5 @@ DerivedData/
 .superpowers/
 build/
 *.log
+.vercel
+.env*
