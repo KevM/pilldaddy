@@ -21,7 +21,7 @@ struct MedicationModelTests {
         #expect(only.form == "tablet")
         #expect(only.isActive)
         #expect(!only.isPRN)
-        #expect(only.batchItems ?? [] == [])
+        #expect(only.routineItems ?? [] == [])
         #expect(only.successor == nil)
     }
 }

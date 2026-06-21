@@ -1,6 +1,6 @@
 name: PillDaddy
 options:
-  bundleIdPrefix: com.pilldaddy
+  bundleIdPrefix: rodeo.fm
 settings:
   base:
     DEVELOPMENT_TEAM: 6HQGHHRK87
@@ -59,7 +59,7 @@ targets:
       - path: PillDaddy/Shared
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.pilldaddy.PillDaddy.widgets
+        PRODUCT_BUNDLE_IDENTIFIER: rodeo.fm.PillDaddy.widgets
     info:
       path: PillDaddyWidgets/Info.plist
       properties:

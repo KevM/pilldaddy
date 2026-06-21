@@ -1,16 +1,16 @@
 import SwiftUI
 import SwiftData
 
-/// One batch on the Today screen. Collapsed → summary; expanded → meds + actions.
-struct BatchLogCard: View {
-    let batchDay: DayQuery.BatchDay
+/// One routine on the Today screen. Collapsed → summary; expanded → meds + actions.
+struct RoutineLogCard: View {
+    let routineDay: DayQuery.RoutineDay
     let isExpanded: Bool
     let onToggle: () -> Void
     let onMarkAllTaken: () -> Void
     let onAdjust: () -> Void
     let onRevert: () -> Void
 
-    private var color: Color { Color(hex: batchDay.batch.colorHex) }
+    private var color: Color { Color(hex: routineDay.routine.colorHex) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -18,9 +18,9 @@ struct BatchLogCard: View {
                 HStack {
                     Circle().fill(color).frame(width: 12, height: 12)
                     VStack(alignment: .leading) {
-                        Text(batchDay.batch.name.isEmpty ? "Batch" : batchDay.batch.name)
+                        Text(routineDay.routine.name.isEmpty ? "Routine" : routineDay.routine.name)
                             .font(.headline)
-                        Text(batchDay.slotDate, style: .time)
+                        Text(routineDay.slotDate, style: .time)
                             .font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
@@ -32,7 +32,7 @@ struct BatchLogCard: View {
             .buttonStyle(.plain)
 
             if isExpanded {
-                ForEach(batchDay.meds) { dose in
+                ForEach(routineDay.meds) { dose in
                     HStack {
                         Text(dose.item.medication?.name ?? "—")
                         Spacer()
@@ -50,7 +50,7 @@ struct BatchLogCard: View {
 
     @ViewBuilder private var statusChip: some View {
         Group {
-            switch batchDay.state {
+            switch routineDay.state {
             case .taken: Label("Taken", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
             case .skipped: Label("Skipped", systemImage: "xmark.circle.fill").foregroundStyle(.orange)
             case .missed: Label("Missed", systemImage: "exclamationmark.circle.fill").foregroundStyle(.secondary)
@@ -77,13 +77,13 @@ struct BatchLogCard: View {
 
     @ViewBuilder private var actionButtons: some View {
         VStack(spacing: 8) {
-            if !batchDay.isCompleted {
+            if !routineDay.isCompleted {
                 Button("Mark all taken", action: onMarkAllTaken)
                     .buttonStyle(.borderedProminent).frame(maxWidth: .infinity)
             }
             Button("Adjust individually…", action: onAdjust)
                 .buttonStyle(.bordered).frame(maxWidth: .infinity)
-            if batchDay.state != .pending {
+            if routineDay.state != .pending {
                 Button("Clear log", role: .destructive, action: onRevert)
                     .font(.caption)
             }
@@ -95,10 +95,10 @@ struct BatchLogCard: View {
 #if DEBUG
 #Preview {
     let container = PreviewSupport.seededContainer()
-    let batches = try! container.mainContext.fetch(
-        FetchDescriptor<Batch>(sortBy: [SortDescriptor(\.sortOrder)]))
-    let day = DayQuery.batchDays(from: batches, on: .now).first!
-    return BatchLogCard(batchDay: day, isExpanded: true, onToggle: {},
+    let routines = try! container.mainContext.fetch(
+        FetchDescriptor<Routine>(sortBy: [SortDescriptor(\.timeOfDay), SortDescriptor(\.uuid)]))
+    let day = DayQuery.routineDays(from: routines, on: .now).first!
+    return RoutineLogCard(routineDay: day, isExpanded: true, onToggle: {},
                         onMarkAllTaken: {}, onAdjust: {}, onRevert: {})
         .modelContainer(container)
         .padding()

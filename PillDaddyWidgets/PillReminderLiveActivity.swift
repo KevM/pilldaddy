@@ -15,7 +15,7 @@ struct PillReminderLiveActivity: Widget {
                 }
                 DynamicIslandExpandedRegion(.center) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(context.attributes.batchName).font(.headline)
+                        Text(context.attributes.routineName).font(.headline)
                         Text("\(context.attributes.medCount) meds · tap to log")
                             .font(.caption).foregroundStyle(.secondary)
                     }
@@ -37,7 +37,7 @@ struct PillReminderLiveActivity: Widget {
             } minimal: {
                 Circle().fill(accent(context.state.tier)).frame(width: 12, height: 12)
             }
-            .widgetURL(URL(string: "pilldaddy://batch/\(context.attributes.batchID)"))
+            .widgetURL(URL(string: "pilldaddy://routine/\(context.attributes.routineID)"))
         }
     }
 
@@ -51,7 +51,7 @@ struct PillReminderLiveActivity: Widget {
                     .frame(width: 42, height: 42)
                     .background(accent(tier), in: RoundedRectangle(cornerRadius: 12))
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title(tier, name: context.attributes.batchName))
+                    Text(title(tier, name: context.attributes.routineName))
                         .font(.headline).foregroundStyle(.white)
                     Text("\(context.attributes.medCount) meds")
                         .font(.subheadline).foregroundStyle(.white.opacity(0.65))
@@ -67,7 +67,7 @@ struct PillReminderLiveActivity: Widget {
                 .tint(accent(tier))
         }
         .padding(14)
-        .widgetURL(URL(string: "pilldaddy://batch/\(context.attributes.batchID)"))
+        .widgetURL(URL(string: "pilldaddy://routine/\(context.attributes.routineID)"))
     }
 
     private func accent(_ tier: ReminderTier) -> Color {

@@ -14,70 +14,70 @@ struct DayQueryTests {
         self.context = container.mainContext
     }
 
-    private func fetchBatches() throws -> [Batch] {
-        try context.fetch(FetchDescriptor<Batch>(
-            sortBy: [SortDescriptor(\.sortOrder), SortDescriptor(\.timeOfDay)]))
+    private func fetchRoutines() throws -> [Routine] {
+        try context.fetch(FetchDescriptor<Routine>(
+            sortBy: [SortDescriptor(\.timeOfDay), SortDescriptor(\.uuid)]))
     }
 
     @Test
-    func testDailyBatchRecursEveryDay() throws {
-        let b = Batch(name: "Blue", recurrenceKind: .daily)
+    func testDailyRoutineRecursEveryDay() throws {
+        let b = Routine(name: "Blue", recurrenceKind: .daily)
         context.insert(b)
         #expect(DayQuery.recurs(b, on: .now))
     }
 
     @Test
-    func testWeekdaysBatchOnlyRecursOnListedWeekdays() throws {
+    func testWeekdaysRoutineOnlyRecursOnListedWeekdays() throws {
         let day = Date.now
         let wd = Calendar.current.component(.weekday, from: day)
-        let exclude = Batch(name: "Wk", recurrenceKind: .weekdays,
+        let exclude = Routine(name: "Wk", recurrenceKind: .weekdays,
                             weekdays: [1,2,3,4,5,6,7].filter { $0 != wd })
-        let include = Batch(name: "Wk2", recurrenceKind: .weekdays, weekdays: [wd])
+        let include = Routine(name: "Wk2", recurrenceKind: .weekdays, weekdays: [wd])
         context.insert(exclude); context.insert(include)
         #expect(!DayQuery.recurs(exclude, on: day))
         #expect(DayQuery.recurs(include, on: day))
     }
 
     @Test
-    func testBatchDaysExcludeDiscontinuedAndPRNAndEmptyBatches() throws {
-        let blue = Batch(name: "Blue", sortOrder: 0)
-        let empty = Batch(name: "Empty", sortOrder: 1)
+    func testRoutineDaysExcludeDiscontinuedAndPRNAndEmptyRoutines() throws {
+        let blue = Routine(name: "Blue")
+        let empty = Routine(name: "Empty")
         context.insert(blue); context.insert(empty)
 
         let active = try MedicationService.addMedication(
             name: "Active", strengthValue: 10, strengthUnit: "mg", form: "tablet", isPRN: false, notes: "",
-            placements: [(batch: blue, quantity: 1.0)], reason: "", in: context)
+            placements: [(routine: blue, quantity: 1.0)], reason: "", in: context)
         _ = active
         let stopped = try MedicationService.addMedication(
             name: "Stopped", strengthValue: 10, strengthUnit: "mg", form: "tablet", isPRN: false, notes: "",
-            placements: [(batch: blue, quantity: 1.0)], reason: "", in: context)
+            placements: [(routine: blue, quantity: 1.0)], reason: "", in: context)
         try MedicationService.discontinue(stopped, reason: "x", in: context)
 
-        let days = DayQuery.batchDays(from: try fetchBatches(), on: .now)
-        #expect(days.count == 1)                       // Empty batch dropped
-        #expect(days.first?.batch.name == "Blue")
+        let days = DayQuery.routineDays(from: try fetchRoutines(), on: .now)
+        #expect(days.count == 1)                       // Empty routine dropped
+        #expect(days.first?.routine.name == "Blue")
         #expect(days.first?.meds.map { $0.item.medication?.name } == ["Active"])
         #expect(days.first?.state == .pending)         // nothing logged yet
     }
 
     @Test
-    func testBatchDayStateReflectsExistingLogs() throws {
-        let blue = Batch(name: "Blue", timeOfDay: .now, sortOrder: 0)
+    func testRoutineDayStateReflectsExistingLogs() throws {
+        let blue = Routine(name: "Blue", timeOfDay: .now)
         context.insert(blue)
         let med = try MedicationService.addMedication(
             name: "A", strengthValue: 1, strengthUnit: "mg", form: "tablet", isPRN: false, notes: "",
-            placements: [(batch: blue, quantity: 1.0)], reason: "", in: context)
+            placements: [(routine: blue, quantity: 1.0)], reason: "", in: context)
         let med2 = try MedicationService.addMedication(
             name: "B", strengthValue: 1, strengthUnit: "mg", form: "tablet", isPRN: false, notes: "",
-            placements: [(batch: blue, quantity: 1.0)], reason: "", in: context)
+            placements: [(routine: blue, quantity: 1.0)], reason: "", in: context)
         _ = (med, med2)
 
         let item = try #require((blue.items ?? []).first { $0.medication?.name == "A" })
-        let log = DoseLog(scheduledDate: .now, status: .taken, medication: item.medication, batchItem: item)
+        let log = DoseLog(scheduledDate: .now, status: .taken, medication: item.medication, routineItem: item)
         context.insert(log)
         try context.save()
 
-        let day = try #require(DayQuery.batchDays(from: try fetchBatches(), on: .now).first)
+        let day = try #require(DayQuery.routineDays(from: try fetchRoutines(), on: .now).first)
         #expect(day.state == .partial)
         let aDose = try #require(day.meds.first { $0.item.medication?.name == "A" })
         #expect(aDose.log != nil)
@@ -91,11 +91,11 @@ struct DayQueryTests {
             name: "Tylenol", strengthValue: 500, strengthUnit: "mg", form: "tablet", isPRN: true, notes: "",
             placements: [], reason: "", in: context)
         context.insert(DoseLog(scheduledDate: .now, takenAt: .now, status: .taken,
-                               quantity: 1.0, isPRN: true, medication: tylenol, batchItem: nil))
+                               quantity: 1.0, isPRN: true, medication: tylenol, routineItem: nil))
         // a log from a different day must not appear
         let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: .now)!
         context.insert(DoseLog(scheduledDate: yesterday, takenAt: yesterday, status: .taken,
-                               quantity: 1.0, isPRN: true, medication: tylenol, batchItem: nil))
+                               quantity: 1.0, isPRN: true, medication: tylenol, routineItem: nil))
         try context.save()
 
         let meds = try context.fetch(FetchDescriptor<Medication>(
@@ -124,17 +124,17 @@ struct DayQueryTests {
     }
 
     @Test
-    func testPrnDosesUsesIsPRNFlagNotBatchItemLink() throws {
+    func testPrnDosesUsesIsPRNFlagNotRoutineItemLink() throws {
         let container = try ModelTestSupport.makeContainer()
         let context = container.mainContext
 
-        // A scheduled (non-PRN) log whose batchItem link has been nullified must NOT
+        // A scheduled (non-PRN) log whose routineItem link has been nullified must NOT
         // be classified as PRN.
         let scheduled = Medication(name: "Metoprolol", strengthValue: 30, strengthUnit: "mg",
                                    form: "tablet", isPRN: false)
         context.insert(scheduled)
         let orphanLog = DoseLog(scheduledDate: .now, status: .taken,
-                                medication: scheduled, batchItem: nil)
+                                medication: scheduled, routineItem: nil)
         orphanLog.isPRN = false
         context.insert(orphanLog)
 
@@ -143,7 +143,7 @@ struct DayQueryTests {
                                  form: "tablet", isPRN: true)
         context.insert(tylenol)
         let prnLog = DoseLog(scheduledDate: .now, status: .taken,
-                             medication: tylenol, batchItem: nil)
+                             medication: tylenol, routineItem: nil)
         prnLog.isPRN = true
         context.insert(prnLog)
         try context.save()
@@ -156,38 +156,38 @@ struct DayQueryTests {
     }
 
     @Test
-    func testBatchDayStateAndIsCompletedAllStatuses() throws {
-        let blue = Batch(name: "Blue", timeOfDay: .now, sortOrder: 0)
+    func testRoutineDayStateAndIsCompletedAllStatuses() throws {
+        let blue = Routine(name: "Blue", timeOfDay: .now)
         context.insert(blue)
         let medA = try MedicationService.addMedication(
             name: "A", strengthValue: 1, strengthUnit: "mg", form: "tablet", isPRN: false, notes: "",
-            placements: [(batch: blue, quantity: 1.0)], reason: "", in: context)
+            placements: [(routine: blue, quantity: 1.0)], reason: "", in: context)
         let medB = try MedicationService.addMedication(
             name: "B", strengthValue: 1, strengthUnit: "mg", form: "tablet", isPRN: false, notes: "",
-            placements: [(batch: blue, quantity: 1.0)], reason: "", in: context)
+            placements: [(routine: blue, quantity: 1.0)], reason: "", in: context)
         let itemA = try #require((blue.items ?? []).first { $0.medication?.name == "A" })
         let itemB = try #require((blue.items ?? []).first { $0.medication?.name == "B" })
 
         // 1. Pending (no logs)
-        var days = DayQuery.batchDays(from: try fetchBatches(), on: .now)
+        var days = DayQuery.routineDays(from: try fetchRoutines(), on: .now)
         var day = try #require(days.first)
         #expect(day.state == .pending)
         #expect(!day.isCompleted)
 
         // 2. Partial (only A logged)
-        let logA = DoseLog(scheduledDate: .now, status: .taken, medication: itemA.medication, batchItem: itemA)
+        let logA = DoseLog(scheduledDate: .now, status: .taken, medication: itemA.medication, routineItem: itemA)
         context.insert(logA)
         try context.save()
-        days = DayQuery.batchDays(from: try fetchBatches(), on: .now)
+        days = DayQuery.routineDays(from: try fetchRoutines(), on: .now)
         day = try #require(days.first)
         #expect(day.state == .partial)
         #expect(!day.isCompleted)
 
         // 3. Taken (both taken)
-        let logB = DoseLog(scheduledDate: .now, status: .taken, medication: itemB.medication, batchItem: itemB)
+        let logB = DoseLog(scheduledDate: .now, status: .taken, medication: itemB.medication, routineItem: itemB)
         context.insert(logB)
         try context.save()
-        days = DayQuery.batchDays(from: try fetchBatches(), on: .now)
+        days = DayQuery.routineDays(from: try fetchRoutines(), on: .now)
         day = try #require(days.first)
         #expect(day.state == .taken)
         #expect(day.isCompleted)
@@ -196,7 +196,7 @@ struct DayQueryTests {
         logA.status = DoseStatus.skipped.rawValue
         logB.status = DoseStatus.skipped.rawValue
         try context.save()
-        days = DayQuery.batchDays(from: try fetchBatches(), on: .now)
+        days = DayQuery.routineDays(from: try fetchRoutines(), on: .now)
         day = try #require(days.first)
         #expect(day.state == .skipped)
         #expect(day.isCompleted)
@@ -205,7 +205,7 @@ struct DayQueryTests {
         logA.status = DoseStatus.missed.rawValue
         logB.status = DoseStatus.missed.rawValue
         try context.save()
-        days = DayQuery.batchDays(from: try fetchBatches(), on: .now)
+        days = DayQuery.routineDays(from: try fetchRoutines(), on: .now)
         day = try #require(days.first)
         #expect(day.state == .missed)
         #expect(day.isCompleted)
@@ -214,7 +214,7 @@ struct DayQueryTests {
         logA.status = DoseStatus.taken.rawValue
         logB.status = DoseStatus.skipped.rawValue
         try context.save()
-        days = DayQuery.batchDays(from: try fetchBatches(), on: .now)
+        days = DayQuery.routineDays(from: try fetchRoutines(), on: .now)
         day = try #require(days.first)
         #expect(day.state == .completed)
         #expect(day.isCompleted)

@@ -2,21 +2,21 @@ import Foundation
 import SwiftData
 
 @Model
-final class BatchItem {
+final class RoutineItem {
     var quantity: Double = 1.0              // fractions allowed (0.5)
     var instructionsOverride: String = ""
 
     var medication: Medication? = nil
-    var batch: Batch? = nil
+    var routine: Routine? = nil
 
-    @Relationship(deleteRule: .nullify, inverse: \DoseLog.batchItem)
+    @Relationship(deleteRule: .nullify, inverse: \DoseLog.routineItem)
     var doseLogs: [DoseLog]? = []
 
     init(quantity: Double = 1.0, instructionsOverride: String = "",
-         medication: Medication? = nil, batch: Batch? = nil) {
+         medication: Medication? = nil, routine: Routine? = nil) {
         self.quantity = quantity
         self.instructionsOverride = instructionsOverride
         self.medication = medication
-        self.batch = batch
+        self.routine = routine
     }
 }

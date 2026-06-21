@@ -20,11 +20,11 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         [.banner, .sound]
     }
 
-    // Tap → focus the batch on the Today tab.
+    // Tap → focus the routine on the Today tab.
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 didReceive response: UNNotificationResponse) async {
-        if let uuid = response.notification.request.content.userInfo["batchUUID"] as? String {
-            await MainActor.run { router.pendingBatchUUID = uuid }
+        if let uuid = response.notification.request.content.userInfo["routineUUID"] as? String {
+            await MainActor.run { router.pendingRoutineUUID = uuid }
         }
     }
 }
@@ -66,8 +66,8 @@ struct PillDaddyApp: App {
                 .environment(appDelegate.router)
                 .environment(settings)
                 .onOpenURL { url in
-                    if url.scheme == "pilldaddy", url.host == "batch" {
-                        appDelegate.router.pendingBatchUUID = url.lastPathComponent
+                    if url.scheme == "pilldaddy", url.host == "routine" {
+                        appDelegate.router.pendingRoutineUUID = url.lastPathComponent
                     }
                 }
                 .onChange(of: scenePhase) { _, phase in
@@ -86,9 +86,9 @@ struct PillDaddyApp: App {
     @MainActor
     private func syncReminders() {
         let context = container.mainContext
-        let batches = (try? context.fetch(FetchDescriptor<Batch>())) ?? []
+        let routines = (try? context.fetch(FetchDescriptor<Routine>())) ?? []
         MissedReconciler.reconcile(
-            batches: batches, now: .now, graceMinutes: settings.graceMinutes, in: context)
+            routines: routines, now: .now, graceMinutes: settings.graceMinutes, in: context)
         ReminderSync.refresh(context: context, settings: settings)
     }
 }

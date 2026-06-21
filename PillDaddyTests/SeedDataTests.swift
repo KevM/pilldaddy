@@ -6,19 +6,19 @@ import Testing
 @MainActor
 struct SeedDataTests {
     @Test
-    func testSeedPopulatesWorkedExampleRegime() throws {
+    func testSeedPopulatesWorkedExampleRoutines() throws {
         let container = try ModelTestSupport.makeContainer()
         let context = container.mainContext
 
         SeedData.seedIfEmpty(context)
         try context.save()
 
-        // Metoprolol exists in two batches at 1.0 and 0.5
+        // Metoprolol exists in two routines at 1.0 and 0.5
         let metoprolol = try #require(
             try context.fetch(FetchDescriptor<Medication>(
                 predicate: #Predicate { $0.name == "Metoprolol" })).first)
-        #expect(metoprolol.batchItems?.count == 2)
-        #expect((metoprolol.batchItems ?? []).map(\.quantity).sorted() == [0.5, 1.0])
+        #expect(metoprolol.routineItems?.count == 2)
+        #expect((metoprolol.routineItems ?? []).map(\.quantity).sorted() == [0.5, 1.0])
 
         // At least one PRN med
         let prnMeds = try context.fetch(FetchDescriptor<Medication>(

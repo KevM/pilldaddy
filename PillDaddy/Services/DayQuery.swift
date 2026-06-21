@@ -7,22 +7,22 @@ import SwiftData
 @MainActor
 enum DayQuery {
 
-    enum BatchState { case pending, partial, taken, skipped, missed, completed }
+    enum RoutineState { case pending, partial, taken, skipped, missed, completed }
 
     /// One scheduled med on a day, paired with its existing log (if any).
     struct MedDose: Identifiable {
-        let item: BatchItem
+        let item: RoutineItem
         let log: DoseLog?
         var id: PersistentIdentifier { item.persistentModelID }
     }
 
-    /// A batch occurring on a day, with its active scheduled meds and computed state.
-    struct BatchDay: Identifiable {
-        let batch: Batch
+    /// A routine occurring on a day, with its active scheduled meds and computed state.
+    struct RoutineDay: Identifiable {
+        let routine: Routine
         let slotDate: Date
         let meds: [MedDose]
-        var id: PersistentIdentifier { batch.persistentModelID }
-        var state: BatchState {
+        var id: PersistentIdentifier { routine.persistentModelID }
+        var state: RoutineState {
             let loggedCount = meds.filter { $0.log != nil }.count
             if loggedCount == 0 { return .pending }
             if loggedCount < meds.count { return .partial }
@@ -50,33 +50,33 @@ enum DayQuery {
         var id: PersistentIdentifier { med.persistentModelID }
     }
 
-    /// Whether a batch occurs on the given day (daily always; weekdays per its list).
-    static func recurs(_ batch: Batch, on day: Date) -> Bool {
-        switch RecurrenceKind(rawValue: batch.recurrenceKind) ?? .daily {
+    /// Whether a routine occurs on the given day (daily always; weekdays per its list).
+    static func recurs(_ routine: Routine, on day: Date) -> Bool {
+        switch RecurrenceKind(rawValue: routine.recurrenceKind) ?? .daily {
         case .daily: return true
         case .weekdays:
             let wd = Calendar.current.component(.weekday, from: day)
-            return (batch.weekdays ?? []).contains(wd)
+            return (routine.weekdays ?? []).contains(wd)
         }
     }
 
-    /// The slot datetime for a batch on a day: that calendar day + the batch's clock time.
-    static func slotDate(for batch: Batch, on day: Date) -> Date {
+    /// The slot datetime for a routine on a day: that calendar day + the routine's clock time.
+    static func slotDate(for routine: Routine, on day: Date) -> Date {
         let cal = Calendar.current
         let start = cal.startOfDay(for: day)
-        let comps = cal.dateComponents([.hour, .minute], from: batch.timeOfDay)
+        let comps = cal.dateComponents([.hour, .minute], from: routine.timeOfDay)
         return cal.date(bySettingHour: comps.hour ?? 0, minute: comps.minute ?? 0,
                         second: 0, of: start) ?? start
     }
 
-    /// Batches occurring on the day (in their stored order), each with active, non-PRN
-    /// meds and any existing logs. Empty batches are omitted.
-    static func batchDays(from batches: [Batch], on day: Date) -> [BatchDay] {
+    /// Routines occurring on the day (in time-of-day order), each with active, non-PRN
+    /// meds and any existing logs. Empty routines are omitted.
+    static func routineDays(from routines: [Routine], on day: Date) -> [RoutineDay] {
         let cal = Calendar.current
-        return batches
+        return routines
             .filter { recurs($0, on: day) }
-            .compactMap { batch -> BatchDay? in
-                let meds = (batch.items ?? [])
+            .compactMap { routine -> RoutineDay? in
+                let meds = (routine.items ?? [])
                     .filter { ($0.medication?.isActive ?? false) && !($0.medication?.isPRN ?? false) }
                     .sorted { ($0.medication?.name ?? "") < ($1.medication?.name ?? "") }
                     .map { item in
@@ -85,7 +85,7 @@ enum DayQuery {
                                     cal.isDate($0.scheduledDate, inSameDayAs: day) })
                     }
                 guard !meds.isEmpty else { return nil }
-                return BatchDay(batch: batch, slotDate: slotDate(for: batch, on: day), meds: meds)
+                return RoutineDay(routine: routine, slotDate: slotDate(for: routine, on: day), meds: meds)
             }
     }
 

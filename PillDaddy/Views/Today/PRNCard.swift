@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-/// Regime-style "as-needed" card. The per-drug log UI is hidden until expanded.
+/// Routine-style "as-needed" card. The per-drug log UI is hidden until expanded.
 struct PRNCard: View {
     let doses: [DayQuery.PRNDose]
     let day: Date

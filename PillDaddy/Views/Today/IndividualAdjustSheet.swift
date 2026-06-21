@@ -1,10 +1,10 @@
 import SwiftUI
 import SwiftData
 
-/// Per-med taken / skip / clear for one batch on a day. A note is required when
+/// Per-med taken / skip / clear for one routine on a day. A note is required when
 /// any med is set to Skip (the note applies to those skips).
 struct IndividualAdjustSheet: View {
-    let batchDay: DayQuery.BatchDay
+    let routineDay: DayQuery.RoutineDay
     let day: Date
 
     @Environment(\.modelContext) private var context
@@ -32,7 +32,7 @@ struct IndividualAdjustSheet: View {
                 }
 
                 Section {
-                    ForEach(batchDay.meds) { dose in
+                    ForEach(routineDay.meds) { dose in
                         VStack(alignment: .leading, spacing: 6) {
                             Text(dose.item.medication?.name ?? "—")
                             Picker("Dose choice for \(dose.item.medication?.name ?? "")", selection: binding(for: dose)) {
@@ -50,7 +50,7 @@ struct IndividualAdjustSheet: View {
                     }
                 }
             }
-            .navigationTitle("Adjust \(batchDay.batch.name)")
+            .navigationTitle("Adjust \(routineDay.routine.name)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
@@ -72,7 +72,7 @@ struct IndividualAdjustSheet: View {
     }
 
     private func seedChoices() {
-        for dose in batchDay.meds {
+        for dose in routineDay.meds {
             switch dose.log?.status {
             case DoseStatus.taken.rawValue: choices[dose.id] = .taken
             case DoseStatus.skipped.rawValue: choices[dose.id] = .skip
@@ -83,7 +83,7 @@ struct IndividualAdjustSheet: View {
     }
 
     private func save() {
-        for dose in batchDay.meds {
+        for dose in routineDay.meds {
             do {
                 switch choices[dose.id] ?? .clear {
                 case .taken:
@@ -109,10 +109,10 @@ struct IndividualAdjustSheet: View {
 #if DEBUG
 #Preview {
     let container = PreviewSupport.seededContainer()
-    let batches = try! container.mainContext.fetch(
-        FetchDescriptor<Batch>(sortBy: [SortDescriptor(\.sortOrder)]))
-    let day = DayQuery.batchDays(from: batches, on: .now).first!
-    return IndividualAdjustSheet(batchDay: day, day: .now)
+    let routines = try! container.mainContext.fetch(
+        FetchDescriptor<Routine>(sortBy: [SortDescriptor(\.timeOfDay), SortDescriptor(\.uuid)]))
+    let day = DayQuery.routineDays(from: routines, on: .now).first!
+    return IndividualAdjustSheet(routineDay: day, day: .now)
         .modelContainer(container)
 }
 #endif

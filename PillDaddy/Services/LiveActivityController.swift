@@ -2,14 +2,14 @@ import Foundation
 import SwiftData
 import ActivityKit
 
-/// Manages a single Live Activity for the most urgent due/overdue batch today.
+/// Manages a single Live Activity for the most urgent due/overdue routine today.
 /// Local-only: starts/updates only while the app is foregrounded (no push).
 @MainActor
 enum LiveActivityController {
 
-    /// Reconciles the running activity with the current state. Ends it when no batch
-    /// is in its pester window, or starts/updates it for the focus batch.
-    static func refresh(batches: [Batch], now: Date, graceMinutes: Int, enabled: Bool) {
+    /// Reconciles the running activity with the current state. Ends it when no routine
+    /// is in its pester window, or starts/updates it for the focus routine.
+    static func refresh(routines: [Routine], now: Date, graceMinutes: Int, enabled: Bool) {
         let running = Activity<PillReminderAttributes>.activities
 
         guard enabled, ActivityAuthorizationInfo().areActivitiesEnabled else {
@@ -18,7 +18,7 @@ enum LiveActivityController {
         }
 
         let grace = TimeInterval(graceMinutes) * 60
-        guard let focus = focusBatch(batches: batches, now: now, grace: grace) else {
+        guard let focus = focusRoutine(routines: routines, now: now, grace: grace) else {
             endAll(running)
             return
         }
@@ -30,33 +30,33 @@ enum LiveActivityController {
             scheduledDate: slot, graceEndDate: graceEnd, tier: tier)
         let content = ActivityContent(state: state, staleDate: graceEnd)
 
-        if let existing = running.first(where: { $0.attributes.batchID == focus.uuid.uuidString }) {
+        if let existing = running.first(where: { $0.attributes.routineID == focus.uuid.uuidString }) {
             Task { await existing.update(content) }
             // end any other stale activities
-            for a in running where a.attributes.batchID != focus.uuid.uuidString {
+            for a in running where a.attributes.routineID != focus.uuid.uuidString {
                 Task { await a.end(nil, dismissalPolicy: .immediate) }
             }
         } else {
             endAll(running)
             let attributes = PillReminderAttributes(
-                batchID: focus.uuid.uuidString, batchName: focus.name,
+                routineID: focus.uuid.uuidString, routineName: focus.name,
                 colorHex: focus.colorHex, medCount: activeMedCount(focus))
             _ = try? Activity.request(attributes: attributes, content: content)
         }
     }
 
-    /// Earliest batch today whose slot is in the pester window [slot, slot+grace)
+    /// Earliest routine today whose slot is in the pester window [slot, slot+grace)
     /// and is not fully logged.
-    private static func focusBatch(batches: [Batch], now: Date, grace: TimeInterval) -> Batch? {
-        DayQuery.batchDays(from: batches, on: now)
+    private static func focusRoutine(routines: [Routine], now: Date, grace: TimeInterval) -> Routine? {
+        DayQuery.routineDays(from: routines, on: now)
             .filter { !$0.isCompleted }
             .filter { now >= $0.slotDate && now < $0.slotDate.addingTimeInterval(grace) }
             .min { $0.slotDate < $1.slotDate }?
-            .batch
+            .routine
     }
 
-    private static func activeMedCount(_ batch: Batch) -> Int {
-        (batch.items ?? []).filter {
+    private static func activeMedCount(_ routine: Routine) -> Int {
+        (routine.items ?? []).filter {
             ($0.medication?.isActive ?? false) && !($0.medication?.isPRN ?? false)
         }.count
     }

@@ -17,7 +17,7 @@ struct MainTabView: View {
             SettingsView()
                 .tabItem { Label("Settings", systemImage: "gear") }.tag(4)
         }
-        .onChange(of: router.pendingBatchUUID) { _, uuid in
+        .onChange(of: router.pendingRoutineUUID) { _, uuid in
             if uuid != nil { selection = 0 }
         }
     }

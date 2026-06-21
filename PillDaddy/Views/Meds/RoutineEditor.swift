@@ -1,11 +1,11 @@
 import SwiftUI
 import SwiftData
 
-/// Create or edit a batch: name, color, time, meal relation, recurrence, and the
+/// Create or edit a routine: name, color, time, meal relation, recurrence, and the
 /// pills it contains. (The README's "color manager".)
-struct BatchEditor: View {
-    /// nil = creating a new batch.
-    let batch: Batch?
+struct RoutineEditor: View {
+    /// nil = creating a new routine.
+    let routine: Routine?
 
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
@@ -32,7 +32,7 @@ struct BatchEditor: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Batch") {
+                Section("Routine") {
                     TextField("Name", text: $name)
                     colorRow
                     DatePicker("Time", selection: $time, displayedComponents: .hourAndMinute)
@@ -48,8 +48,8 @@ struct BatchEditor: View {
                     if recurrence == .weekdays { weekdayRow }
                 }
 
-                if let batch {
-                    Section("Pills in this batch") {
+                if let routine {
+                    Section("Pills in this routine") {
                         ForEach(activeItems) { item in
                             Button {
                                 editingMed = item.medication
@@ -66,14 +66,14 @@ struct BatchEditor: View {
                         .onDelete { offsets in
                             for index in offsets {
                                 do {
-                                    try MedicationService.removeFromBatch(activeItems[index], in: context)
+                                    try MedicationService.removeFromRoutine(activeItems[index], in: context)
                                 } catch {
                                     errorMessage = error.localizedDescription
                                 }
                             }
                         }
                         Menu("Add medication") {
-                            ForEach(addableMeds(to: batch)) { med in
+                            ForEach(addableMeds(to: routine)) { med in
                                 Button(med.name) {
                                     addingMed = med
                                     addQuantity = min(1.0, max(0.5, DoseAllocation.remaining(med)))
@@ -83,7 +83,7 @@ struct BatchEditor: View {
                         }
                     }
                     Section {
-                        Button("Delete batch", role: .destructive) { confirmingDelete = true }
+                        Button("Delete routine", role: .destructive) { confirmingDelete = true }
                             .disabled(!activeItems.isEmpty)
                         if !activeItems.isEmpty {
                             Text("Remove the \(activeItems.count) active medication(s) before deleting.")
@@ -92,7 +92,7 @@ struct BatchEditor: View {
                     }
                 }
             }
-            .navigationTitle(batch == nil ? "New batch" : "Edit batch")
+            .navigationTitle(routine == nil ? "New routine" : "Edit routine")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
@@ -120,8 +120,8 @@ struct BatchEditor: View {
                         ToolbarItem(placement: .confirmationAction) {
                             Button("Add") {
                                 do {
-                                    if let batch {
-                                        try MedicationService.addToBatch(med, batch, quantity: addQuantity, in: context)
+                                    if let routine {
+                                        try MedicationService.addToRoutine(med, routine, quantity: addQuantity, in: context)
                                     }
                                     addingMed = nil
                                 } catch {
@@ -156,11 +156,11 @@ struct BatchEditor: View {
                     Text(errorMessage)
                 }
             }
-            .alert("Delete this batch?", isPresented: $confirmingDelete) {
+            .alert("Delete this routine?", isPresented: $confirmingDelete) {
                 Button("Delete", role: .destructive) {
-                    if let batch {
+                    if let routine {
                         do {
-                            try MedicationService.deleteBatch(batch, in: context)
+                            try MedicationService.deleteRoutine(routine, in: context)
                             dismiss()
                         } catch {
                             errorMessage = error.localizedDescription
@@ -216,29 +216,29 @@ struct BatchEditor: View {
         }
     }
 
-    private var activeItems: [BatchItem] {
-        guard let batch else { return [] }
-        return (batch.items ?? []).filter { $0.medication?.isActive == true }
+    private var activeItems: [RoutineItem] {
+        guard let routine else { return [] }
+        return (routine.items ?? []).filter { $0.medication?.isActive == true }
     }
 
-    private func addableMeds(to batch: Batch) -> [Medication] {
+    private func addableMeds(to routine: Routine) -> [Medication] {
         let present = Set(activeItems.compactMap { $0.medication?.persistentModelID })
         return meds.filter { !present.contains($0.persistentModelID) }
     }
 
     private func load() {
-        guard let batch else { return }
-        name = batch.name
-        colorHex = batch.colorHex
-        time = batch.timeOfDay
-        meal = MealRelation(rawValue: batch.mealRelation) ?? .none
-        recurrence = RecurrenceKind(rawValue: batch.recurrenceKind) ?? .daily
-        weekdays = Set(batch.weekdays ?? [])
+        guard let routine else { return }
+        name = routine.name
+        colorHex = routine.colorHex
+        time = routine.timeOfDay
+        meal = MealRelation(rawValue: routine.mealRelation) ?? .none
+        recurrence = RecurrenceKind(rawValue: routine.recurrenceKind) ?? .daily
+        weekdays = Set(routine.weekdays ?? [])
     }
 
     private func save() {
-        let target = batch ?? Batch()
-        if batch == nil { context.insert(target) }
+        let target = routine ?? Routine()
+        if routine == nil { context.insert(target) }
         target.name = name
         target.colorHex = colorHex
         target.timeOfDay = time
@@ -253,7 +253,7 @@ struct BatchEditor: View {
         if let doseError = error as? DoseAllocationError {
             switch doseError {
             case .exceedsDailyTarget:
-                return "Total allocation across batches cannot exceed the daily dose target."
+                return "Total allocation across routines cannot exceed the daily dose target."
             }
         }
         return error.localizedDescription
@@ -262,7 +262,7 @@ struct BatchEditor: View {
 
 #if DEBUG
 #Preview {
-    BatchEditor(batch: nil)
+    RoutineEditor(routine: nil)
         .modelContainer(PreviewSupport.seededContainer())
 }
 #endif

@@ -17,7 +17,7 @@ struct DoseLogServicePRNTests {
     private func logs() throws -> [DoseLog] { try context.fetch(FetchDescriptor<DoseLog>()) }
 
     @Test
-    func testLogPRNCreatesBatchItemNilRowAndIsRepeatable() throws {
+    func testLogPRNCreatesRoutineItemNilRowAndIsRepeatable() throws {
         let med = Medication(name: "Acetaminophen", strengthValue: 500, strengthUnit: "mg", dailyDoseTarget: 1.0, isPRN: true)
         context.insert(med)
         DoseLogService.logPRN(med, takenAt: .now, quantity: 2.0, note: "headache", in: context)
@@ -25,7 +25,7 @@ struct DoseLogServicePRNTests {
 
         let all = try logs()
         #expect(all.count == 2)                  // each PRN dose is its own row
-        #expect(all.allSatisfy { $0.batchItem == nil })
+        #expect(all.allSatisfy { $0.routineItem == nil })
         #expect(all.first?.snapshotMedName == "Acetaminophen")
         #expect(Set(all.map { $0.quantity }) == [1.0, 2.0])
     }

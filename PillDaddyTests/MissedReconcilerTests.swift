@@ -16,28 +16,28 @@ struct MissedReconcilerTests {
     }
 
     @discardableResult
-    private func makeBatch(hour: Int, recurrence: RecurrenceKind = .daily,
-                           weekdays: [Int]? = nil) -> (Batch, BatchItem) {
+    private func makeRoutine(hour: Int, recurrence: RecurrenceKind = .daily,
+                           weekdays: [Int]? = nil) -> (Routine, RoutineItem) {
         let t = cal.date(bySettingHour: hour, minute: 0, second: 0, of: .now)!
-        let batch = Batch(name: "B\(hour)", timeOfDay: t,
+        let routine = Routine(name: "B\(hour)", timeOfDay: t,
                           recurrenceKind: recurrence, weekdays: weekdays)
-        context.insert(batch)
+        context.insert(routine)
 
         let med = Medication(name: "Med\(hour)")
         context.insert(med)
-        let item = BatchItem(quantity: 1.0, medication: med, batch: batch)
+        let item = RoutineItem(quantity: 1.0, medication: med, routine: routine)
         context.insert(item)
         try? context.save()
-        return (batch, item)
+        return (routine, item)
     }
 
     private func logs() throws -> [DoseLog] { try context.fetch(FetchDescriptor<DoseLog>()) }
 
     @Test
     func testWritesMissedForUnloggedSlotPastGrace() throws {
-        let (batch, _) = makeBatch(hour: 9)
-        let now = DayQuery.slotDate(for: batch, on: .now).addingTimeInterval(121 * 60)
-        MissedReconciler.reconcile(batches: [batch], now: now, graceMinutes: 120, lookbackDays: 0, in: context)
+        let (routine, _) = makeRoutine(hour: 9)
+        let now = DayQuery.slotDate(for: routine, on: .now).addingTimeInterval(121 * 60)
+        MissedReconciler.reconcile(routines: [routine], now: now, graceMinutes: 120, lookbackDays: 0, in: context)
         let all = try logs()
         #expect(all.count == 1)
         #expect(all.first?.status == DoseStatus.missed.rawValue)
@@ -47,18 +47,18 @@ struct MissedReconcilerTests {
 
     @Test
     func testDoesNotWriteBeforeGrace() throws {
-        let (batch, _) = makeBatch(hour: 9)
-        let now = DayQuery.slotDate(for: batch, on: .now).addingTimeInterval(60 * 60)
-        MissedReconciler.reconcile(batches: [batch], now: now, graceMinutes: 120, lookbackDays: 0, in: context)
+        let (routine, _) = makeRoutine(hour: 9)
+        let now = DayQuery.slotDate(for: routine, on: .now).addingTimeInterval(60 * 60)
+        MissedReconciler.reconcile(routines: [routine], now: now, graceMinutes: 120, lookbackDays: 0, in: context)
         #expect(try logs().count == 0)
     }
 
     @Test
     func testPreservesExistingTakenOrSkipped() throws {
-        let (batch, item) = makeBatch(hour: 9)
-        DoseLogService.logBatchTaken(batch, on: .now, items: [item], takenAt: .now, note: "", in: context)
-        let now = DayQuery.slotDate(for: batch, on: .now).addingTimeInterval(121 * 60)
-        MissedReconciler.reconcile(batches: [batch], now: now, graceMinutes: 120, lookbackDays: 0, in: context)
+        let (routine, item) = makeRoutine(hour: 9)
+        DoseLogService.logRoutineTaken(routine, on: .now, items: [item], takenAt: .now, note: "", in: context)
+        let now = DayQuery.slotDate(for: routine, on: .now).addingTimeInterval(121 * 60)
+        MissedReconciler.reconcile(routines: [routine], now: now, graceMinutes: 120, lookbackDays: 0, in: context)
         let all = try logs()
         #expect(all.count == 1)
         #expect(all.first?.status == DoseStatus.taken.rawValue)
@@ -66,20 +66,20 @@ struct MissedReconcilerTests {
 
     @Test
     func testIdempotent() throws {
-        let (batch, _) = makeBatch(hour: 9)
-        let now = DayQuery.slotDate(for: batch, on: .now).addingTimeInterval(121 * 60)
-        MissedReconciler.reconcile(batches: [batch], now: now, graceMinutes: 120, lookbackDays: 0, in: context)
-        MissedReconciler.reconcile(batches: [batch], now: now, graceMinutes: 120, lookbackDays: 0, in: context)
+        let (routine, _) = makeRoutine(hour: 9)
+        let now = DayQuery.slotDate(for: routine, on: .now).addingTimeInterval(121 * 60)
+        MissedReconciler.reconcile(routines: [routine], now: now, graceMinutes: 120, lookbackDays: 0, in: context)
+        MissedReconciler.reconcile(routines: [routine], now: now, graceMinutes: 120, lookbackDays: 0, in: context)
         #expect(try logs().count == 1)
     }
 
     @Test
     func testExcludesDiscontinuedMed() throws {
-        let (batch, item) = makeBatch(hour: 9)
+        let (routine, item) = makeRoutine(hour: 9)
         item.medication?.isActive = false
         try context.save()
-        let now = DayQuery.slotDate(for: batch, on: .now).addingTimeInterval(121 * 60)
-        MissedReconciler.reconcile(batches: [batch], now: now, graceMinutes: 120, lookbackDays: 0, in: context)
+        let now = DayQuery.slotDate(for: routine, on: .now).addingTimeInterval(121 * 60)
+        MissedReconciler.reconcile(routines: [routine], now: now, graceMinutes: 120, lookbackDays: 0, in: context)
         #expect(try logs().count == 0)
     }
 
@@ -87,9 +87,9 @@ struct MissedReconcilerTests {
     func testRespectsWeekdayRecurrence() throws {
         let today = cal.component(.weekday, from: .now)
         let other = (today % 7) + 1
-        let (batch, _) = makeBatch(hour: 9, recurrence: .weekdays, weekdays: [other])
-        let now = DayQuery.slotDate(for: batch, on: .now).addingTimeInterval(121 * 60)
-        MissedReconciler.reconcile(batches: [batch], now: now, graceMinutes: 120, lookbackDays: 0, in: context)
+        let (routine, _) = makeRoutine(hour: 9, recurrence: .weekdays, weekdays: [other])
+        let now = DayQuery.slotDate(for: routine, on: .now).addingTimeInterval(121 * 60)
+        MissedReconciler.reconcile(routines: [routine], now: now, graceMinutes: 120, lookbackDays: 0, in: context)
         #expect(try logs().count == 0)
     }
 }
