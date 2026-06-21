@@ -1,4 +1,3 @@
-#if DEBUG
 import SwiftData
 
 /// A seeded in-memory container for SwiftUI previews.
@@ -18,4 +17,3 @@ enum PreviewSupport {
         try! container.mainContext.fetch(FetchDescriptor<Medication>()).first!
     }
 }
-#endif
