@@ -18,7 +18,7 @@ struct DoseLogTests {
         let log = DoseLog(
             scheduledDate: .now, status: .taken, quantity: 1.0,
             snapshotMedName: "Metoprolol", snapshotStrength: "30 mg",
-            snapshotBatchColorHex: "#3B82F6", medication: med, batchItem: item)
+            medication: med, batchItem: item)
         context.insert(log)
         try context.save()
 

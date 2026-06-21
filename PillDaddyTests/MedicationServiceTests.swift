@@ -454,7 +454,7 @@ struct MedicationServiceTests {
         let log = DoseLog(scheduledDate: .now, takenAt: .now, status: .taken, quantity: 1.0,
                           snapshotMedName: "Metoprolol", snapshotStrength: "30 mg",
                           snapshotStrengthValue: 30, snapshotStrengthUnit: "mg",
-                          snapshotBatchColorHex: "#3B82F6", medication: med, batchItem: item)
+                          medication: med, batchItem: item)
         context.insert(log)
         try context.save()
 
@@ -466,7 +466,6 @@ struct MedicationServiceTests {
         #expect(logs.count == 1)
         #expect(logs.first?.batchItem == nil)                              // link nullified
         #expect(logs.first?.snapshotMedName == "Metoprolol")              // snapshot survives
-        #expect(logs.first?.snapshotBatchColorHex == "#3B82F6")
     }
 
     @Test

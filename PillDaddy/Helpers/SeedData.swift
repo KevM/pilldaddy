@@ -79,12 +79,10 @@ enum SeedData {
         context.insert(DoseLog(
             scheduledDate: blueSlot, takenAt: time(9, 5), status: .taken, quantity: 1.0,
             snapshotMedName: metoprolol.name, snapshotStrength: metoprolol.strengthDescription,
-            snapshotBatchColorHex: blue.colorHex,
             medication: metoprolol, batchItem: metoprololBlue))
         context.insert(DoseLog(
             scheduledDate: blueSlot, status: .skipped, quantity: 1.0, notes: "Held — low appetite",
             snapshotMedName: vitaminD.name, snapshotStrength: vitaminD.strengthDescription,
-            snapshotBatchColorHex: blue.colorHex,
             medication: vitaminD, batchItem: vitaminDBlue))
         context.insert(DoseLog(
             scheduledDate: time(14, 30), takenAt: time(14, 30), status: .taken, quantity: 1.0,

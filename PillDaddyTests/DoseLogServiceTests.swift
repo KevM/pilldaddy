@@ -43,7 +43,6 @@ struct DoseLogServiceTests {
         #expect(aLog.status == DoseStatus.taken.rawValue)
         #expect(aLog.quantity == 0.5)
         #expect(aLog.snapshotStrength == "10 mg")
-        #expect(aLog.snapshotBatchColorHex == "#3B82F6")
         #expect(aLog.takenAt == at)
     }
 

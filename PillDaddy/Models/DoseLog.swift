@@ -15,7 +15,6 @@ final class DoseLog {
     var snapshotStrength: String = ""
     var snapshotStrengthValue: Double = 0
     var snapshotStrengthUnit: String = "mg"
-    var snapshotBatchColorHex: String = ""
     var isPRN: Bool = false                  // frozen at log time; true only for ad-hoc PRN doses
 
     var medication: Medication? = nil
@@ -25,7 +24,7 @@ final class DoseLog {
          quantity: Double = 1.0, notes: String = "", uuid: UUID = UUID(),
          snapshotMedName: String = "", snapshotStrength: String = "",
          snapshotStrengthValue: Double = 0, snapshotStrengthUnit: String = "mg",
-         snapshotBatchColorHex: String = "", isPRN: Bool = false,
+         isPRN: Bool = false,
          medication: Medication? = nil, batchItem: BatchItem? = nil) {
         self.scheduledDate = scheduledDate
         self.takenAt = takenAt
@@ -37,7 +36,6 @@ final class DoseLog {
         self.snapshotStrength = snapshotStrength
         self.snapshotStrengthValue = snapshotStrengthValue
         self.snapshotStrengthUnit = snapshotStrengthUnit
-        self.snapshotBatchColorHex = snapshotBatchColorHex
         self.isPRN = isPRN
         self.medication = medication
         self.batchItem = batchItem
