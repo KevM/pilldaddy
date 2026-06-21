@@ -10,7 +10,7 @@ struct BatchLogCard: View {
     let onAdjust: () -> Void
     let onRevert: () -> Void
 
-    private var color: Color { Color(hex: batchDay.batch.colorHex) }
+    private var color: Color { Color(hex: batchDay.routine.colorHex) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -18,7 +18,7 @@ struct BatchLogCard: View {
                 HStack {
                     Circle().fill(color).frame(width: 12, height: 12)
                     VStack(alignment: .leading) {
-                        Text(batchDay.batch.name.isEmpty ? "Batch" : batchDay.batch.name)
+                        Text(batchDay.routine.name.isEmpty ? "Routine" : batchDay.routine.name)
                             .font(.headline)
                         Text(batchDay.slotDate, style: .time)
                             .font(.caption).foregroundStyle(.secondary)
@@ -96,7 +96,7 @@ struct BatchLogCard: View {
 #Preview {
     let container = PreviewSupport.seededContainer()
     let batches = try! container.mainContext.fetch(
-        FetchDescriptor<Batch>(sortBy: [SortDescriptor(\.timeOfDay), SortDescriptor(\.uuid)]))
+        FetchDescriptor<Routine>(sortBy: [SortDescriptor(\.timeOfDay), SortDescriptor(\.uuid)]))
     let day = DayQuery.batchDays(from: batches, on: .now).first!
     return BatchLogCard(batchDay: day, isExpanded: true, onToggle: {},
                         onMarkAllTaken: {}, onAdjust: {}, onRevert: {})

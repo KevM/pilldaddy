@@ -9,7 +9,7 @@ enum LiveActivityController {
 
     /// Reconciles the running activity with the current state. Ends it when no batch
     /// is in its pester window, or starts/updates it for the focus batch.
-    static func refresh(batches: [Batch], now: Date, graceMinutes: Int, enabled: Bool) {
+    static func refresh(batches: [Routine], now: Date, graceMinutes: Int, enabled: Bool) {
         let running = Activity<PillReminderAttributes>.activities
 
         guard enabled, ActivityAuthorizationInfo().areActivitiesEnabled else {
@@ -47,16 +47,16 @@ enum LiveActivityController {
 
     /// Earliest batch today whose slot is in the pester window [slot, slot+grace)
     /// and is not fully logged.
-    private static func focusBatch(batches: [Batch], now: Date, grace: TimeInterval) -> Batch? {
+    private static func focusBatch(batches: [Routine], now: Date, grace: TimeInterval) -> Routine? {
         DayQuery.batchDays(from: batches, on: now)
             .filter { !$0.isCompleted }
             .filter { now >= $0.slotDate && now < $0.slotDate.addingTimeInterval(grace) }
             .min { $0.slotDate < $1.slotDate }?
-            .batch
+            .routine
     }
 
-    private static func activeMedCount(_ batch: Batch) -> Int {
-        (batch.items ?? []).filter {
+    private static func activeMedCount(_ routine: Routine) -> Int {
+        (routine.items ?? []).filter {
             ($0.medication?.isActive ?? false) && !($0.medication?.isPRN ?? false)
         }.count
     }

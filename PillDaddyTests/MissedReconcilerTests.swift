@@ -17,15 +17,15 @@ struct MissedReconcilerTests {
 
     @discardableResult
     private func makeBatch(hour: Int, recurrence: RecurrenceKind = .daily,
-                           weekdays: [Int]? = nil) -> (Batch, BatchItem) {
+                           weekdays: [Int]? = nil) -> (Routine, RoutineItem) {
         let t = cal.date(bySettingHour: hour, minute: 0, second: 0, of: .now)!
-        let batch = Batch(name: "B\(hour)", timeOfDay: t,
+        let batch = Routine(name: "B\(hour)", timeOfDay: t,
                           recurrenceKind: recurrence, weekdays: weekdays)
         context.insert(batch)
 
         let med = Medication(name: "Med\(hour)")
         context.insert(med)
-        let item = BatchItem(quantity: 1.0, medication: med, batch: batch)
+        let item = RoutineItem(quantity: 1.0, medication: med, routine: batch)
         context.insert(item)
         try? context.save()
         return (batch, item)

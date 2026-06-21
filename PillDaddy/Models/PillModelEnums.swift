@@ -1,12 +1,12 @@
 import Foundation
 
-/// Relationship of a batch to a meal. Stored on Batch as a raw String.
+/// Relationship of a batch to a meal. Stored on Routine as a raw String.
 enum MealRelation: String, CaseIterable, Identifiable {
     case none, withFood, beforeFood, afterFood
     var id: String { rawValue }
 }
 
-/// How often a batch recurs. Stored on Batch as a raw String.
+/// How often a batch recurs. Stored on Routine as a raw String.
 enum RecurrenceKind: String, CaseIterable, Identifiable {
     case daily, weekdays
     var id: String { rawValue }

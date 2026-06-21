@@ -17,22 +17,22 @@ struct ReminderSchedulerTests {
 
     /// A daily batch at the given clock time with one active scheduled med.
     private func makeBatch(hour: Int, minute: Int = 0,
-                           recurrence: RecurrenceKind = .daily, weekdays: [Int]? = nil) -> Batch {
+                           recurrence: RecurrenceKind = .daily, weekdays: [Int]? = nil) -> Routine {
         let t = cal.date(bySettingHour: hour, minute: minute, second: 0, of: .now)!
-        let batch = Batch(name: "B\(hour)", timeOfDay: t,
+        let batch = Routine(name: "B\(hour)", timeOfDay: t,
                           recurrenceKind: recurrence, weekdays: weekdays)
         context.insert(batch)
 
         let med = Medication(name: "Med\(hour)")
         context.insert(med)
-        context.insert(BatchItem(quantity: 1.0, medication: med, batch: batch))
+        context.insert(RoutineItem(quantity: 1.0, medication: med, routine: batch))
         try? context.save()
         return batch
     }
 
     /// `now` set to 1 hour before the batch slot today, so all reminders are in the future.
-    private func nowBefore(_ batch: Batch) -> Date {
-        DayQuery.slotDate(for: batch, on: .now).addingTimeInterval(-3600)
+    private func nowBefore(_ routine: Routine) -> Date {
+        DayQuery.slotDate(for: routine, on: .now).addingTimeInterval(-3600)
     }
 
     @Test

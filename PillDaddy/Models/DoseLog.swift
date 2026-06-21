@@ -18,14 +18,14 @@ final class DoseLog {
     var isPRN: Bool = false                  // frozen at log time; true only for ad-hoc PRN doses
 
     var medication: Medication? = nil
-    var batchItem: BatchItem? = nil          // nil for PRN logs
+    var routineItem: RoutineItem? = nil          // nil for PRN logs
 
     init(scheduledDate: Date = .now, takenAt: Date? = nil, status: DoseStatus = .taken,
          quantity: Double = 1.0, notes: String = "", uuid: UUID = UUID(),
          snapshotMedName: String = "", snapshotStrength: String = "",
          snapshotStrengthValue: Double = 0, snapshotStrengthUnit: String = "mg",
          isPRN: Bool = false,
-         medication: Medication? = nil, batchItem: BatchItem? = nil) {
+         medication: Medication? = nil, routineItem: RoutineItem? = nil) {
         self.scheduledDate = scheduledDate
         self.takenAt = takenAt
         self.status = status.rawValue
@@ -38,6 +38,6 @@ final class DoseLog {
         self.snapshotStrengthUnit = snapshotStrengthUnit
         self.isPRN = isPRN
         self.medication = medication
-        self.batchItem = batchItem
+        self.routineItem = routineItem
     }
 }

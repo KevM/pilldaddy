@@ -83,7 +83,7 @@ struct BatchTakenConfirmSheet: View {
                     TextField("Applies to the doses being taken", text: $note, axis: .vertical)
                 }
             }
-            .navigationTitle(batchDay.batch.name.isEmpty ? "Batch" : batchDay.batch.name)
+            .navigationTitle(batchDay.routine.name.isEmpty ? "Routine" : batchDay.routine.name)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
@@ -112,7 +112,7 @@ struct BatchTakenConfirmSheet: View {
 
     private func confirm() {
         let fill = unlogged.map(\.item) + skipped.filter { flipped.contains($0.id) }.map(\.item) + missed.filter { flipped.contains($0.id) }.map(\.item)
-        DoseLogService.logBatchTaken(batchDay.batch, on: day, items: fill,
+        DoseLogService.logBatchTaken(batchDay.routine, on: day, items: fill,
                                      takenAt: takenAt, note: note, in: context)
         dismiss()
     }
@@ -122,7 +122,7 @@ struct BatchTakenConfirmSheet: View {
 #Preview {
     let container = PreviewSupport.seededContainer()
     let batches = try! container.mainContext.fetch(
-        FetchDescriptor<Batch>(sortBy: [SortDescriptor(\.timeOfDay), SortDescriptor(\.uuid)]))
+        FetchDescriptor<Routine>(sortBy: [SortDescriptor(\.timeOfDay), SortDescriptor(\.uuid)]))
     let day = DayQuery.batchDays(from: batches, on: .now).first!
     return BatchTakenConfirmSheet(batchDay: day, day: .now)
         .modelContainer(container)

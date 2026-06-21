@@ -22,7 +22,7 @@ enum ReminderTier: String, Codable, Hashable {
 /// Describes one overdue/due batch surfaced as a Live Activity.
 struct PillReminderAttributes: ActivityAttributes {
     /// Static for the life of the activity.
-    let batchID: String       // Batch.uuid.uuidString
+    let batchID: String       // Routine.uuid.uuidString
     let batchName: String
     let colorHex: String
     let medCount: Int

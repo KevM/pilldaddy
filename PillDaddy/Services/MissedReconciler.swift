@@ -7,7 +7,7 @@ import SwiftData
 enum MissedReconciler {
 
     static func reconcile(
-        batches: [Batch],
+        batches: [Routine],
         now: Date,
         graceMinutes: Int,
         lookbackDays: Int = 7,

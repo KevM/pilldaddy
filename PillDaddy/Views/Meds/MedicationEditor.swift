@@ -14,8 +14,8 @@ struct MedicationEditor: View {
 
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
-    @Query(sort: [SortDescriptor(\Batch.timeOfDay), SortDescriptor(\Batch.uuid)])
-    private var batches: [Batch]
+    @Query(sort: [SortDescriptor(\Routine.timeOfDay), SortDescriptor(\Routine.uuid)])
+    private var batches: [Routine]
 
     @State private var name = ""
     @State private var strengthValue = 0.0
@@ -108,8 +108,8 @@ struct MedicationEditor: View {
     }
 
     @ViewBuilder
-    private func batchAssignRow(_ batch: Batch) -> some View {
-        let id = batch.persistentModelID
+    private func batchAssignRow(_ routine: Routine) -> some View {
+        let id = routine.persistentModelID
         let isOn = selected.contains(id)
         VStack(alignment: .leading) {
             Toggle(isOn: Binding(
@@ -119,10 +119,10 @@ struct MedicationEditor: View {
                     else { selected.remove(id) }
                 })) {
                 HStack {
-                    Circle().fill(Color(hex: batch.colorHex)).frame(width: 12, height: 12)
-                    Text(batch.name.isEmpty ? "Batch" : batch.name)
+                    Circle().fill(Color(hex: routine.colorHex)).frame(width: 12, height: 12)
+                    Text(routine.name.isEmpty ? "Routine" : routine.name)
                     Spacer()
-                    Text(batch.timeOfDay, style: .time)
+                    Text(routine.timeOfDay, style: .time)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -149,7 +149,7 @@ struct MedicationEditor: View {
     private func save() {
         switch mode {
         case .add:
-            let placements: [(batch: Batch, quantity: Double)] = isPRN ? [] :
+            let placements: [(routine: Routine, quantity: Double)] = isPRN ? [] :
                 batches
                     .filter { selected.contains($0.persistentModelID) }
                     .map { ($0, quantities[$0.persistentModelID] ?? 1.0) }
@@ -163,12 +163,12 @@ struct MedicationEditor: View {
                 errorMessage = errorMessage(for: error)
             }
         case .edit(let med):
-            let wasScheduled = !(med.batchItems ?? []).isEmpty
+            let wasScheduled = !(med.routineItems ?? []).isEmpty
             med.name = name
             med.form = form
             med.generalNotes = notes
             if isPRN && wasScheduled {
-                for item in med.batchItems ?? [] { context.delete(item) }
+                for item in med.routineItems ?? [] { context.delete(item) }
                 context.insert(MedicationChangeEvent(
                     type: .doseChanged,
                     reasoning: "Converted medication to PRN (cleared scheduled batches)",

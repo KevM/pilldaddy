@@ -25,7 +25,7 @@ struct DoseLogServicePRNTests {
 
         let all = try logs()
         #expect(all.count == 2)                  // each PRN dose is its own row
-        #expect(all.allSatisfy { $0.batchItem == nil })
+        #expect(all.allSatisfy { $0.routineItem == nil })
         #expect(all.first?.snapshotMedName == "Acetaminophen")
         #expect(Set(all.map { $0.quantity }) == [1.0, 2.0])
     }

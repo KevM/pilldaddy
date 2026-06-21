@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 @Model
-final class Batch {
+final class Routine {
     var name: String = ""
     var colorHex: String = "#3B82F6"
     var timeOfDay: Date = Date.now          // only the clock-time component is meaningful
@@ -11,9 +11,8 @@ final class Batch {
     var weekdays: [Int]? = nil              // 1...7 when recurrenceKind == "weekdays"
     var uuid: UUID = UUID()
 
-
-    @Relationship(deleteRule: .cascade, inverse: \BatchItem.batch)
-    var items: [BatchItem]? = []
+    @Relationship(deleteRule: .cascade, inverse: \RoutineItem.routine)
+    var items: [RoutineItem]? = []
 
     init(name: String = "", colorHex: String = "#3B82F6", timeOfDay: Date = .now,
          mealRelation: MealRelation = .none, recurrenceKind: RecurrenceKind = .daily,

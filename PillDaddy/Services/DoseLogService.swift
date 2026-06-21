@@ -16,7 +16,7 @@ enum DoseLogService {
     /// Marks the given items taken for the batch's slot on `day` (the fill set the
     /// confirm sheet computed). Items not passed are left untouched. Optional note.
     static func logBatchTaken(
-        _ batch: Batch, on day: Date, items: [BatchItem],
+        _ routine: Routine, on day: Date, items: [RoutineItem],
         takenAt: Date, note: String, in context: ModelContext
     ) {
         for item in items {
@@ -27,7 +27,7 @@ enum DoseLogService {
 
     /// Upserts a single med's row for its slot on `day`. A skip requires a note.
     static func logMed(
-        _ item: BatchItem, on day: Date, status: DoseStatus,
+        _ item: RoutineItem, on day: Date, status: DoseStatus,
         takenAt: Date?, note: String, in context: ModelContext
     ) throws {
         if status == .skipped { try requireNote(note) }
@@ -36,13 +36,13 @@ enum DoseLogService {
     }
 
     /// Deletes the slot row for one med on `day` (back to unlogged).
-    static func revert(_ item: BatchItem, on day: Date, in context: ModelContext) {
+    static func revert(_ item: RoutineItem, on day: Date, in context: ModelContext) {
         if let log = existingLog(for: item, on: day) { context.delete(log) }
         try? context.save()
     }
 
     /// Deletes the slot rows for all given items on `day` (back to unlogged).
-    static func revertBatch(_ batch: Batch, on day: Date, items: [BatchItem], in context: ModelContext) {
+    static func revertBatch(_ routine: Routine, on day: Date, items: [RoutineItem], in context: ModelContext) {
         for item in items {
             if let log = existingLog(for: item, on: day) { context.delete(log) }
         }
@@ -51,7 +51,7 @@ enum DoseLogService {
 
     /// Writes a `missed` row for the item's slot on `day` only if nothing is logged
     /// there yet (never overwrites a taken/skipped dose). Idempotent.
-    static func materializeMissed(_ item: BatchItem, on day: Date, in context: ModelContext) {
+    static func materializeMissed(_ item: RoutineItem, on day: Date, in context: ModelContext) {
         guard existingLog(for: item, on: day) == nil else { return }
         upsert(item: item, on: day, status: .missed, takenAt: nil, note: "", in: context)
         try? context.save()
@@ -70,7 +70,7 @@ enum DoseLogService {
             quantity: quantity, notes: note,
             snapshotMedName: med.name, snapshotStrength: med.strengthDescription,
             snapshotStrengthValue: med.strengthValue, snapshotStrengthUnit: med.strengthUnit,
-            isPRN: true, medication: med, batchItem: nil)
+            isPRN: true, medication: med, routineItem: nil)
         context.insert(log)
         try? context.save()
         return log
@@ -86,17 +86,17 @@ enum DoseLogService {
 
     @discardableResult
     private static func upsert(
-        item: BatchItem, on day: Date, status: DoseStatus,
+        item: RoutineItem, on day: Date, status: DoseStatus,
         takenAt: Date?, note: String, in context: ModelContext
     ) -> DoseLog {
         let log: DoseLog
         if let existing = existingLog(for: item, on: day) {
             log = existing
         } else {
-            log = DoseLog(medication: item.medication, batchItem: item)
+            log = DoseLog(medication: item.medication, routineItem: item)
             context.insert(log)
         }
-        let slot = item.batch.map { DayQuery.slotDate(for: $0, on: day) }
+        let slot = item.routine.map { DayQuery.slotDate(for: $0, on: day) }
             ?? Calendar.current.startOfDay(for: day)
         log.scheduledDate = slot
         log.status = status.rawValue
@@ -110,7 +110,7 @@ enum DoseLogService {
         return log
     }
 
-    private static func existingLog(for item: BatchItem, on day: Date) -> DoseLog? {
+    private static func existingLog(for item: RoutineItem, on day: Date) -> DoseLog? {
         let cal = Calendar.current
         return (item.doseLogs ?? []).first { cal.isDate($0.scheduledDate, inSameDayAs: day) }
     }

@@ -19,7 +19,7 @@ struct ChangeDoseSheet: View {
     }
 
     private var prospectiveTotal: Double {
-        (medication.batchItems ?? []).reduce(0.0) { sum, item in
+        (medication.routineItems ?? []).reduce(0.0) { sum, item in
             sum + (quantities[item.persistentModelID] ?? item.quantity)
         }
     }
@@ -36,10 +36,10 @@ struct ChangeDoseSheet: View {
 
                     DoseQuantityField(title: "Doses per day", value: $target)
 
-                    ForEach(medication.batchItems ?? []) { item in
+                    ForEach(medication.routineItems ?? []) { item in
                         let id = item.persistentModelID
                         DoseQuantityField(
-                            title: item.batch?.name ?? "—",
+                            title: item.routine?.name ?? "—",
                             value: Binding(get: { quantities[id] ?? item.quantity },
                                            set: { quantities[id] = $0 }))
                     }
@@ -80,8 +80,8 @@ struct ChangeDoseSheet: View {
     }
 
     private func save() {
-        let changes = (medication.batchItems ?? []).compactMap {
-            item -> (item: BatchItem, quantity: Double)? in
+        let changes = (medication.routineItems ?? []).compactMap {
+            item -> (item: RoutineItem, quantity: Double)? in
             guard let q = quantities[item.persistentModelID] else { return nil }
             return (item, q)
         }

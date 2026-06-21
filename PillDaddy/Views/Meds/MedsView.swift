@@ -46,7 +46,7 @@ struct MedsView: View {
                 }
             }
             .sheet(isPresented: $showingAddMed) { MedicationEditor(mode: .add) }
-            .sheet(isPresented: $showingAddBatch) { BatchEditor(batch: nil) }
+            .sheet(isPresented: $showingAddBatch) { BatchEditor(routine: nil) }
         }
     }
 }

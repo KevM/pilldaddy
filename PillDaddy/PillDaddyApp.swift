@@ -86,7 +86,7 @@ struct PillDaddyApp: App {
     @MainActor
     private func syncReminders() {
         let context = container.mainContext
-        let batches = (try? context.fetch(FetchDescriptor<Batch>())) ?? []
+        let batches = (try? context.fetch(FetchDescriptor<Routine>())) ?? []
         MissedReconciler.reconcile(
             batches: batches, now: .now, graceMinutes: settings.graceMinutes, in: context)
         ReminderSync.refresh(context: context, settings: settings)

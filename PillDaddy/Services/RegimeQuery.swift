@@ -7,20 +7,20 @@ enum RegimeQuery {
 
     /// A batch paired with its active, non-PRN memberships (sorted by med name).
     struct BatchGroup: Identifiable {
-        let batch: Batch
-        let items: [BatchItem]
-        var id: PersistentIdentifier { batch.persistentModelID }
+        let routine: Routine
+        let items: [RoutineItem]
+        var id: PersistentIdentifier { routine.persistentModelID }
     }
 
     /// All batches (ordered by time of day), each with its active meds only.
     static func activeBatchGroups(in context: ModelContext) throws -> [BatchGroup] {
-        let batches = try context.fetch(FetchDescriptor<Batch>(
+        let batches = try context.fetch(FetchDescriptor<Routine>(
             sortBy: [SortDescriptor(\.timeOfDay), SortDescriptor(\.uuid)]))
         return batches.map { batch in
             let items = (batch.items ?? [])
                 .filter { ($0.medication?.isActive ?? false) && !($0.medication?.isPRN ?? false) }
                 .sorted { ($0.medication?.name ?? "") < ($1.medication?.name ?? "") }
-            return BatchGroup(batch: batch, items: items)
+            return BatchGroup(routine: batch, items: items)
         }
     }
 

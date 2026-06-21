@@ -50,7 +50,7 @@ struct IndividualAdjustSheet: View {
                     }
                 }
             }
-            .navigationTitle("Adjust \(batchDay.batch.name)")
+            .navigationTitle("Adjust \(batchDay.routine.name)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
@@ -110,7 +110,7 @@ struct IndividualAdjustSheet: View {
 #Preview {
     let container = PreviewSupport.seededContainer()
     let batches = try! container.mainContext.fetch(
-        FetchDescriptor<Batch>(sortBy: [SortDescriptor(\.timeOfDay), SortDescriptor(\.uuid)]))
+        FetchDescriptor<Routine>(sortBy: [SortDescriptor(\.timeOfDay), SortDescriptor(\.uuid)]))
     let day = DayQuery.batchDays(from: batches, on: .now).first!
     return IndividualAdjustSheet(batchDay: day, day: .now)
         .modelContainer(container)

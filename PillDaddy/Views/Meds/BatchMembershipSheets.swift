@@ -8,15 +8,15 @@ struct AddToBatchSheet: View {
 
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
-    @Query(sort: [SortDescriptor(\Batch.timeOfDay), SortDescriptor(\Batch.uuid)])
-    private var allBatches: [Batch]
+    @Query(sort: [SortDescriptor(\Routine.timeOfDay), SortDescriptor(\Routine.uuid)])
+    private var allBatches: [Routine]
 
-    @State private var selectedBatch: Batch?
+    @State private var selectedBatch: Routine?
     @State private var quantity = 1.0
     @State private var errorMessage: String?
 
-    private var available: [Batch] {
-        let present = Set((medication.batchItems ?? []).compactMap { $0.batch?.persistentModelID })
+    private var available: [Routine] {
+        let present = Set((medication.routineItems ?? []).compactMap { $0.routine?.persistentModelID })
         return allBatches.filter { !present.contains($0.persistentModelID) }
     }
 
@@ -27,10 +27,10 @@ struct AddToBatchSheet: View {
                     Text("This medication is already in every batch.")
                         .foregroundStyle(.secondary)
                 } else {
-                    Picker("Batch", selection: $selectedBatch) {
-                        Text("Select…").tag(Batch?.none)
+                    Picker("Routine", selection: $selectedBatch) {
+                        Text("Select…").tag(Routine?.none)
                         ForEach(available) { batch in
-                            Text(batch.name.isEmpty ? "Batch" : batch.name).tag(Batch?.some(batch))
+                            Text(batch.name.isEmpty ? "Routine" : batch.name).tag(Routine?.some(batch))
                         }
                     }
                     DoseQuantityField(
@@ -83,17 +83,17 @@ struct AddToBatchSheet: View {
 /// Moves an existing membership to another batch (quantity carried over), routing
 /// through `MedicationService.moveToBatch`.
 struct MoveBatchSheet: View {
-    let item: BatchItem
+    let item: RoutineItem
 
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
-    @Query(sort: [SortDescriptor(\Batch.timeOfDay), SortDescriptor(\Batch.uuid)])
-    private var allBatches: [Batch]
+    @Query(sort: [SortDescriptor(\Routine.timeOfDay), SortDescriptor(\Routine.uuid)])
+    private var allBatches: [Routine]
 
     @State private var errorMessage: String?
 
-    private var available: [Batch] {
-        let present = Set((item.medication?.batchItems ?? []).compactMap { $0.batch?.persistentModelID })
+    private var available: [Routine] {
+        let present = Set((item.medication?.routineItems ?? []).compactMap { $0.routine?.persistentModelID })
         return allBatches.filter { !present.contains($0.persistentModelID) }
     }
 
@@ -109,7 +109,7 @@ struct MoveBatchSheet: View {
                         } label: {
                             HStack {
                                 Circle().fill(Color(hex: batch.colorHex)).frame(width: 10, height: 10)
-                                Text(batch.name.isEmpty ? "Batch" : batch.name)
+                                Text(batch.name.isEmpty ? "Routine" : batch.name)
                             }
                         }
                         .buttonStyle(.plain)
@@ -132,9 +132,9 @@ struct MoveBatchSheet: View {
         }
     }
 
-    private func move(to batch: Batch) {
+    private func move(to routine: Routine) {
         do {
-            try MedicationService.moveToBatch(item, to: batch, in: context)
+            try MedicationService.moveToBatch(item, to: routine, in: context)
             dismiss()
         } catch MembershipError.alreadyInBatch {
             errorMessage = "This medication is already in that batch."

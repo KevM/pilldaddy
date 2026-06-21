@@ -7,8 +7,8 @@ struct TodayView: View {
     @Environment(AppRouter.self) private var router
     @Environment(ReminderSettings.self) private var settings
 
-    @Query(sort: [SortDescriptor(\Batch.timeOfDay), SortDescriptor(\Batch.uuid)])
-    private var batches: [Batch]
+    @Query(sort: [SortDescriptor(\Routine.timeOfDay), SortDescriptor(\Routine.uuid)])
+    private var batches: [Routine]
     @Query(filter: #Predicate<Medication> { $0.isActive && $0.isPRN }, sort: \Medication.name)
     private var prnMeds: [Medication]
     @State private var selectedDay = Date.now
@@ -91,7 +91,7 @@ struct TodayView: View {
     }
 
     private func revert(_ day: DayQuery.BatchDay) {
-        DoseLogService.revertBatch(day.batch, on: selectedDay, items: day.meds.map(\.item), in: context)
+        DoseLogService.revertBatch(day.routine, on: selectedDay, items: day.meds.map(\.item), in: context)
     }
 
     /// On today, expand the batch whose slot time is closest to now and not yet fully

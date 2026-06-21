@@ -8,7 +8,7 @@ struct MedicationDetailView: View {
     @Environment(\.modelContext) private var context
 
     @State private var sheet: DetailSheet?
-    @State private var movingItem: BatchItem?
+    @State private var movingItem: RoutineItem?
     @State private var errorMessage: String?
 
     enum DetailSheet: Identifiable {
@@ -35,7 +35,7 @@ struct MedicationDetailView: View {
 
             if medication.isActive && !medication.isPRN {
                 Section("Schedule") {
-                    ForEach(medication.batchItems ?? []) { item in
+                    ForEach(medication.routineItems ?? []) { item in
                         Menu {
                             Button("Move to another batch…") { movingItem = item }
                             Button("Remove from batch", role: .destructive) {
@@ -47,9 +47,9 @@ struct MedicationDetailView: View {
                             }
                         } label: {
                             HStack {
-                                Circle().fill(Color(hex: item.batch?.colorHex ?? "#8E8E93"))
+                                Circle().fill(Color(hex: item.routine?.colorHex ?? "#8E8E93"))
                                     .frame(width: 10, height: 10)
-                                Text(item.batch?.name ?? "—")
+                                Text(item.routine?.name ?? "—")
                                 Spacer()
                                 Text("\(DoseFormat.qty(item.quantity)) \(medication.form)")
                                     .foregroundStyle(.secondary)
@@ -80,7 +80,7 @@ struct MedicationDetailView: View {
                 if medication.isActive {
                     Button("Edit details") { sheet = .edit }
                     Button("Change dose…") { sheet = .dose }
-                    if !medication.isPRN && !(medication.batchItems ?? []).isEmpty {
+                    if !medication.isPRN && !(medication.routineItems ?? []).isEmpty {
                         Button("Change instructions…") { sheet = .instructions }
                     }
                     Button("Swap to another drug…") { sheet = .swap }

@@ -8,12 +8,12 @@ struct DoseLogServiceTests {
 
     private let container: ModelContainer
     private let context: ModelContext
-    private let blue: Batch
+    private let blue: Routine
 
     init() throws {
         let container = try ModelTestSupport.makeContainer()
         let context = container.mainContext
-        let blue = Batch(name: "Blue", colorHex: "#3B82F6", timeOfDay: .now)
+        let blue = Routine(name: "Blue", colorHex: "#3B82F6", timeOfDay: .now)
         context.insert(blue)
 
         self.container = container
@@ -21,11 +21,11 @@ struct DoseLogServiceTests {
         self.blue = blue
     }
 
-    private func addMed(_ name: String, qty: Double) -> BatchItem {
+    private func addMed(_ name: String, qty: Double) -> RoutineItem {
         let med = try! MedicationService.addMedication(
             name: name, strengthValue: 10, strengthUnit: "mg", form: "tablet", isPRN: false, notes: "",
-            placements: [(batch: blue, quantity: qty)], reason: "", in: context)
-        return (med.batchItems ?? []).first!
+            placements: [(routine: blue, quantity: qty)], reason: "", in: context)
+        return (med.routineItems ?? []).first!
     }
 
     private func logs() throws -> [DoseLog] { try context.fetch(FetchDescriptor<DoseLog>()) }
@@ -60,7 +60,7 @@ struct DoseLogServiceTests {
         let b = addMed("B", qty: 1.0)
         // B already skipped individually
         try DoseLogService.logMed(b, on: .now, status: .skipped, takenAt: nil, note: "BP low", in: context)
-        // Batch-take only A (fill set excludes B)
+        // Routine-take only A (fill set excludes B)
         DoseLogService.logBatchTaken(blue, on: .now, items: [a], takenAt: .now, note: "", in: context)
 
         let bLog = try #require(try logs().first { $0.snapshotMedName == "B" })

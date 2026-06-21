@@ -4,8 +4,8 @@ import SwiftData
 enum PillDaddySchema {
     static let schema = Schema([
         Medication.self,
-        Batch.self,
-        BatchItem.self,
+        Routine.self,
+        RoutineItem.self,
         DoseLog.self,
         MedicationChangeEvent.self,
         HealthMetric.self,

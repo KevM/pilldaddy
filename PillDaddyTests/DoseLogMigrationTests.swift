@@ -21,17 +21,17 @@ struct DoseLogMigrationTests {
         let med = Medication(name: "Tylenol", strengthValue: 500, strengthUnit: "mg", isPRN: true)
         context.insert(med)
 
-        // Legacy PRN log: nil batchItem, isPRN still at the migration default of false.
-        let legacy = DoseLog(scheduledDate: .now, status: .taken, medication: med, batchItem: nil)
+        // Legacy PRN log: nil routineItem, isPRN still at the migration default of false.
+        let legacy = DoseLog(scheduledDate: .now, status: .taken, medication: med, routineItem: nil)
         legacy.isPRN = false
         context.insert(legacy)
 
-        // Scheduled log with a live batchItem must stay non-PRN.
-        let batch = Batch(name: "Morning")
+        // Scheduled log with a live routineItem must stay non-PRN.
+        let batch = Routine(name: "Morning")
         context.insert(batch)
-        let item = BatchItem(quantity: 1.0, medication: med, batch: batch)
+        let item = RoutineItem(quantity: 1.0, medication: med, routine: batch)
         context.insert(item)
-        let scheduled = DoseLog(scheduledDate: .now, status: .taken, medication: med, batchItem: item)
+        let scheduled = DoseLog(scheduledDate: .now, status: .taken, medication: med, routineItem: item)
         scheduled.isPRN = false
         context.insert(scheduled)
         try context.save()
@@ -53,26 +53,26 @@ struct DoseLogMigrationTests {
 
         let med = Medication(name: "Metoprolol", strengthValue: 30, strengthUnit: "mg", isPRN: false)
         context.insert(med)
-        let batch = Batch(name: "Morning")
+        let batch = Routine(name: "Morning")
         context.insert(batch)
-        let item = BatchItem(quantity: 1.0, medication: med, batch: batch)
+        let item = RoutineItem(quantity: 1.0, medication: med, routine: batch)
         context.insert(item)
 
         // Scheduled log
-        let log = DoseLog(scheduledDate: .now, status: .taken, medication: med, batchItem: item)
+        let log = DoseLog(scheduledDate: .now, status: .taken, medication: med, routineItem: item)
         log.isPRN = false
         context.insert(log)
         try context.save()
 
-        // 1. Run backfill. Since 'log' has a batchItem, it must NOT be backfilled.
+        // 1. Run backfill. Since 'log' has a routineItem, it must NOT be backfilled.
         DoseLogMigration.backfillPRNFlag(in: context)
         #expect(log.isPRN == false)
         #expect(UserDefaults.standard.bool(forKey: userDefaultsKey) == true)
 
-        // 2. Now discontinue/make medication inactive so we can delete the batch, nullifying the batchItem link on the log.
+        // 2. Now discontinue/make medication inactive so we can delete the batch, nullifying the routineItem link on the log.
         med.isActive = false
         try MedicationService.deleteBatch(batch, in: context)
-        #expect(log.batchItem == nil)
+        #expect(log.routineItem == nil)
         #expect(log.isPRN == false)
 
         // 3. Run backfill again. Since it already ran, it should return early and not tag the orphan log.

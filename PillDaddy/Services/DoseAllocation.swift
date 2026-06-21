@@ -9,7 +9,7 @@ enum DoseAllocation {
 
     /// Sum of quantity across all the med's batch items, regardless of recurrence.
     static func allocated(_ med: Medication) -> Double {
-        (med.batchItems ?? []).reduce(0) { $0 + $1.quantity }
+        (med.routineItems ?? []).reduce(0) { $0 + $1.quantity }
     }
 
     /// Units/day still unallocated, clamped at zero.

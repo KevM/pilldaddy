@@ -8,7 +8,7 @@ enum ReminderSync {
     static let horizonDays = 3
 
     static func refresh(context: ModelContext, settings: ReminderSettings, now: Date = .now) {
-        let batches = (try? context.fetch(FetchDescriptor<Batch>())) ?? []
+        let batches = (try? context.fetch(FetchDescriptor<Routine>())) ?? []
         let completed = ReminderScheduler.completedSlotKeys(
             batches: batches, now: now, horizonDays: horizonDays)
         ReminderScheduler.reschedule(

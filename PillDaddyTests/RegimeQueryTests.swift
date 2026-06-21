@@ -16,19 +16,19 @@ struct RegimeQueryTests {
 
     @Test
     func testActiveBatchGroupsExcludeDiscontinuedAndPRN() throws {
-        let blue = Batch(name: "Blue")
+        let blue = Routine(name: "Blue")
         context.insert(blue)
 
         let active = try MedicationService.addMedication(
             name: "Active", strengthValue: 10, strengthUnit: "mg", form: "tablet",
             isPRN: false, notes: "",
-            placements: [(batch: blue, quantity: 1.0)], reason: "", in: context)
+            placements: [(routine: blue, quantity: 1.0)], reason: "", in: context)
         _ = active
 
         let discontinued = try MedicationService.addMedication(
             name: "Stopped", strengthValue: 10, strengthUnit: "mg", form: "tablet",
             isPRN: false, notes: "",
-            placements: [(batch: blue, quantity: 1.0)], reason: "", in: context)
+            placements: [(routine: blue, quantity: 1.0)], reason: "", in: context)
         try MedicationService.discontinue(discontinued, reason: "stop", in: context)
 
         let groups = try RegimeQuery.activeBatchGroups(in: context)
@@ -55,16 +55,16 @@ struct RegimeQueryTests {
     func testActiveBatchGroupsSortByTimeOfDay() throws {
         func at(_ h: Int) -> Date { Calendar.current.date(bySettingHour: h, minute: 0, second: 0, of: .now)! }
         
-        let evening = Batch(name: "Evening", timeOfDay: at(19))
-        let morning = Batch(name: "Morning", timeOfDay: at(7))
-        let midday = Batch(name: "Midday", timeOfDay: at(12))
+        let evening = Routine(name: "Evening", timeOfDay: at(19))
+        let morning = Routine(name: "Morning", timeOfDay: at(7))
+        let midday = Routine(name: "Midday", timeOfDay: at(12))
         
         context.insert(evening)
         context.insert(morning)
         context.insert(midday)
         try context.save()
 
-        let names = try RegimeQuery.activeBatchGroups(in: context).map { $0.batch.name }
+        let names = try RegimeQuery.activeBatchGroups(in: context).map { $0.routine.name }
         #expect(names == ["Morning", "Midday", "Evening"])
     }
 }

@@ -7,7 +7,7 @@ struct ChangeInstructionsSheet: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
 
-    @State private var selection: BatchItem?
+    @State private var selection: RoutineItem?
     @State private var instructions = ""
     @State private var reason = ""
 
@@ -19,9 +19,9 @@ struct ChangeInstructionsSheet: View {
         NavigationStack {
             Form {
                 Section("Membership") {
-                    Picker("Batch", selection: $selection) {
-                        ForEach(medication.batchItems ?? []) { item in
-                            Text(item.batch?.name ?? "—").tag(Optional(item))
+                    Picker("Routine", selection: $selection) {
+                        ForEach(medication.routineItems ?? []) { item in
+                            Text(item.routine?.name ?? "—").tag(Optional(item))
                         }
                     }
                 }
@@ -41,7 +41,7 @@ struct ChangeInstructionsSheet: View {
                 }
             }
             .onAppear {
-                selection = (medication.batchItems ?? []).first
+                selection = (medication.routineItems ?? []).first
                 instructions = selection?.instructionsOverride ?? ""
             }
             .onChange(of: selection) { _, new in

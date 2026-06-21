@@ -16,8 +16,8 @@ final class Medication {
     var uuid: UUID = UUID()
     var rxNormCode: String = ""            // RXCUI; empty until RxNorm lookup is wired up
 
-    @Relationship(deleteRule: .cascade, inverse: \BatchItem.medication)
-    var batchItems: [BatchItem]? = []
+    @Relationship(deleteRule: .cascade, inverse: \RoutineItem.medication)
+    var routineItems: [RoutineItem]? = []
 
     @Relationship(deleteRule: .nullify, inverse: \DoseLog.medication)
     var doseLogs: [DoseLog]? = []

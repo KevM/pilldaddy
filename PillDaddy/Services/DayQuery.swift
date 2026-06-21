@@ -11,17 +11,17 @@ enum DayQuery {
 
     /// One scheduled med on a day, paired with its existing log (if any).
     struct MedDose: Identifiable {
-        let item: BatchItem
+        let item: RoutineItem
         let log: DoseLog?
         var id: PersistentIdentifier { item.persistentModelID }
     }
 
     /// A batch occurring on a day, with its active scheduled meds and computed state.
     struct BatchDay: Identifiable {
-        let batch: Batch
+        let routine: Routine
         let slotDate: Date
         let meds: [MedDose]
-        var id: PersistentIdentifier { batch.persistentModelID }
+        var id: PersistentIdentifier { routine.persistentModelID }
         var state: BatchState {
             let loggedCount = meds.filter { $0.log != nil }.count
             if loggedCount == 0 { return .pending }
@@ -51,27 +51,27 @@ enum DayQuery {
     }
 
     /// Whether a batch occurs on the given day (daily always; weekdays per its list).
-    static func recurs(_ batch: Batch, on day: Date) -> Bool {
-        switch RecurrenceKind(rawValue: batch.recurrenceKind) ?? .daily {
+    static func recurs(_ routine: Routine, on day: Date) -> Bool {
+        switch RecurrenceKind(rawValue: routine.recurrenceKind) ?? .daily {
         case .daily: return true
         case .weekdays:
             let wd = Calendar.current.component(.weekday, from: day)
-            return (batch.weekdays ?? []).contains(wd)
+            return (routine.weekdays ?? []).contains(wd)
         }
     }
 
     /// The slot datetime for a batch on a day: that calendar day + the batch's clock time.
-    static func slotDate(for batch: Batch, on day: Date) -> Date {
+    static func slotDate(for routine: Routine, on day: Date) -> Date {
         let cal = Calendar.current
         let start = cal.startOfDay(for: day)
-        let comps = cal.dateComponents([.hour, .minute], from: batch.timeOfDay)
+        let comps = cal.dateComponents([.hour, .minute], from: routine.timeOfDay)
         return cal.date(bySettingHour: comps.hour ?? 0, minute: comps.minute ?? 0,
                         second: 0, of: start) ?? start
     }
 
     /// Batches occurring on the day (in time-of-day order), each with active, non-PRN
     /// meds and any existing logs. Empty batches are omitted.
-    static func batchDays(from batches: [Batch], on day: Date) -> [BatchDay] {
+    static func batchDays(from batches: [Routine], on day: Date) -> [BatchDay] {
         let cal = Calendar.current
         return batches
             .filter { recurs($0, on: day) }
@@ -85,7 +85,7 @@ enum DayQuery {
                                     cal.isDate($0.scheduledDate, inSameDayAs: day) })
                     }
                 guard !meds.isEmpty else { return nil }
-                return BatchDay(batch: batch, slotDate: slotDate(for: batch, on: day), meds: meds)
+                return BatchDay(routine: batch, slotDate: slotDate(for: batch, on: day), meds: meds)
             }
     }
 

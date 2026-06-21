@@ -17,8 +17,8 @@ struct SeedDataTests {
         let metoprolol = try #require(
             try context.fetch(FetchDescriptor<Medication>(
                 predicate: #Predicate { $0.name == "Metoprolol" })).first)
-        #expect(metoprolol.batchItems?.count == 2)
-        #expect((metoprolol.batchItems ?? []).map(\.quantity).sorted() == [0.5, 1.0])
+        #expect(metoprolol.routineItems?.count == 2)
+        #expect((metoprolol.routineItems ?? []).map(\.quantity).sorted() == [0.5, 1.0])
 
         // At least one PRN med
         let prnMeds = try context.fetch(FetchDescriptor<Medication>(

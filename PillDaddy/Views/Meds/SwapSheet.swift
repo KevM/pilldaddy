@@ -30,9 +30,9 @@ struct SwapSheet: View {
                 Section("Schedule") {
                     Toggle("Keep \(oldMed.name)'s schedule", isOn: $inheritSchedule)
                     if inheritSchedule {
-                        ForEach(oldMed.batchItems ?? []) { item in
+                        ForEach(oldMed.routineItems ?? []) { item in
                             HStack {
-                                Text(item.batch?.name ?? "—")
+                                Text(item.routine?.name ?? "—")
                                 Spacer()
                                 Text("\(DoseFormat.qty(item.quantity)) \(oldMed.form)")
                                     .foregroundStyle(.secondary)
