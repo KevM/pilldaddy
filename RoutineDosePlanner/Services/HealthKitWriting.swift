@@ -29,15 +29,29 @@ final class LiveHealthKitWriter: HealthKitWriting {
         HKQuantityType(.bloodPressureSystolic), HKQuantityType(.bloodPressureDiastolic),
     ]
 
-    private func sampleTypes(for kind: MetricKind) -> [HKSampleType] {
+    /// HK object types whose *share* authorization status represents this metric kind.
+    ///
+    /// Blood pressure is special: the user grants a single grouped "Blood Pressure" toggle,
+    /// and HealthKit records that grant on the **correlation** type — the systolic/diastolic
+    /// component quantity types keep reporting `.notDetermined` (confirmed on-device). So we
+    /// must read the correlation type, not the components, or status reads as "Not set".
+    static func authorizationTypes(for kind: MetricKind) -> [HKObjectType] {
         switch kind {
         case .weight: return [HKQuantityType(.bodyMass)]
         case .water: return [HKQuantityType(.dietaryWater)]
         case .pulse: return [HKQuantityType(.heartRate)]
         case .oxygenSaturation: return [HKQuantityType(.oxygenSaturation)]
         case .bloodPressure:
-            return [HKQuantityType(.bloodPressureSystolic), HKQuantityType(.bloodPressureDiastolic)]
+            return [HKCorrelationType(.bloodPressure)]
         }
+    }
+
+    /// Aggregate raw HK statuses: denied if any is denied; authorized only if all are
+    /// authorized; otherwise not-determined.
+    static func aggregate(_ statuses: [HKAuthorizationStatus]) -> HealthShareAuthorization {
+        if statuses.contains(.sharingDenied) { return .denied }
+        if !statuses.isEmpty, statuses.allSatisfy({ $0 == .sharingAuthorized }) { return .authorized }
+        return .notDetermined
     }
 
     func requestAuthorizationIfNeeded() async {
@@ -51,12 +65,9 @@ final class LiveHealthKitWriter: HealthKitWriting {
         try await store.save(objects)
     }
 
-    /// A kind is authorized only if every underlying share type is; denied if any is.
     func authorizationStatus(for kind: MetricKind) -> HealthShareAuthorization {
         guard isHealthDataAvailable else { return .notDetermined }
-        let statuses = sampleTypes(for: kind).map { store.authorizationStatus(for: $0) }
-        if statuses.contains(.sharingDenied) { return .denied }
-        if statuses.allSatisfy({ $0 == .sharingAuthorized }) { return .authorized }
-        return .notDetermined
+        let statuses = Self.authorizationTypes(for: kind).map { store.authorizationStatus(for: $0) }
+        return Self.aggregate(statuses)
     }
 }
