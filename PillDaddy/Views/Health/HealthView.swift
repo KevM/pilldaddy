@@ -33,7 +33,7 @@ struct HealthView: View {
                             .accessibilityLabel("Not in Apple Health — tap for options")
                         }
                     }
-                    .swipeActions { Button("Delete", role: .destructive) { pendingDelete = metric } }
+                    .swipeActions { Button("Delete") { pendingDelete = metric }.tint(.red) }
                 }
             }
             .navigationTitle("Health")

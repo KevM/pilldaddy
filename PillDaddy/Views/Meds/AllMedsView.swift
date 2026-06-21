@@ -23,7 +23,7 @@ struct AllMedsView: View {
                     row(med)
                 }
                 .swipeActions {
-                    Button("Delete", role: .destructive) { pendingDelete = med }
+                    Button("Delete") { pendingDelete = med }.tint(.red)
                 }
             }
         }
