@@ -66,7 +66,7 @@ struct MedicationEditor: View {
                                 .foregroundStyle(.secondary)
                         }
                         ForEach(routines) { routine in
-                            batchAssignRow(routine)
+                            routineAssignRow(routine)
                         }
                     } header: {
                         VStack(alignment: .leading, spacing: 4) {
@@ -108,7 +108,7 @@ struct MedicationEditor: View {
     }
 
     @ViewBuilder
-    private func batchAssignRow(_ routine: Routine) -> some View {
+    private func routineAssignRow(_ routine: Routine) -> some View {
         let id = routine.persistentModelID
         let isOn = selected.contains(id)
         VStack(alignment: .leading) {

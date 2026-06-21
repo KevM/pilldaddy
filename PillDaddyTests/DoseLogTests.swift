@@ -6,7 +6,7 @@ import Testing
 struct DoseLogTests {
 
     @Test
-    func testScheduledDoseLogLinksMedicationAndBatchItem() throws {
+    func testScheduledDoseLogLinksMedicationAndRoutineItem() throws {
         let container = try ModelTestSupport.makeContainer()
         let context = container.mainContext
 
@@ -31,7 +31,7 @@ struct DoseLogTests {
     }
 
     @Test
-    func testPRNDoseLogHasNoBatchItem() throws {
+    func testPRNDoseLogHasNoRoutineItem() throws {
         let container = try ModelTestSupport.makeContainer()
         let context = container.mainContext
 

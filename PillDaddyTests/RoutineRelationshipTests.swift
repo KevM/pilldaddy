@@ -6,7 +6,7 @@ import Testing
 @MainActor
 struct RoutineRelationshipTests {
     @Test
-    func testMedicationInTwoBatchesAtDifferentQuantities() throws {
+    func testMedicationInTwoRoutinesAtDifferentQuantities() throws {
         let container = try ModelTestSupport.makeContainer()
         let context = container.mainContext
 
@@ -37,7 +37,7 @@ struct RoutineRelationshipTests {
     }
 
     @Test
-    func testDefaultsForBatch() throws {
+    func testDefaultsForRoutine() throws {
         let container = try ModelTestSupport.makeContainer()
         let context = container.mainContext
         let routine = Routine()
@@ -49,7 +49,7 @@ struct RoutineRelationshipTests {
     }
 
     @Test
-    func testBatchHasStableDistinctUUID() throws {
+    func testRoutineHasStableDistinctUUID() throws {
         let container = try ModelTestSupport.makeContainer()
         let context = container.mainContext
         let a = Routine(name: "A")

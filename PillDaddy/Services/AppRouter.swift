@@ -7,5 +7,5 @@ import Observation
 /// all mutations happen on the main thread.
 @Observable
 final class AppRouter {
-    var pendingBatchUUID: String?
+    var pendingRoutineUUID: String?
 }

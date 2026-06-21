@@ -14,7 +14,7 @@ enum SeedData {
             cal.date(bySettingHour: hour, minute: minute, second: 0, of: .now) ?? .now
         }
 
-        // Batches
+        // Routines
         let blue = Routine(name: "Blue", colorHex: "#3B82F6",
                          timeOfDay: time(9, 0), mealRelation: .withFood)
         let green = Routine(name: "Green", colorHex: "#10B981",

@@ -16,7 +16,7 @@ struct ReminderSchedulerTests {
     }
 
     /// A daily routine at the given clock time with one active scheduled med.
-    private func makeBatch(hour: Int, minute: Int = 0,
+    private func makeRoutine(hour: Int, minute: Int = 0,
                            recurrence: RecurrenceKind = .daily, weekdays: [Int]? = nil) -> Routine {
         let t = cal.date(bySettingHour: hour, minute: minute, second: 0, of: .now)!
         let routine = Routine(name: "B\(hour)", timeOfDay: t,
@@ -36,8 +36,8 @@ struct ReminderSchedulerTests {
     }
 
     @Test
-    func testDailyBatchEmitsHeadsUpDueAndThreeFollowUps() {
-        let routine = makeBatch(hour: 9)
+    func testDailyRoutineEmitsHeadsUpDueAndThreeFollowUps() {
+        let routine = makeRoutine(hour: 9)
         let plan = ReminderScheduler.plan(
             routines: [routine], now: nowBefore(routine), horizonDays: 1,
             graceMinutes: 120, headsUpEnabled: true, masterEnabled: true)
@@ -50,7 +50,7 @@ struct ReminderSchedulerTests {
 
     @Test
     func testHeadsUpDisabledDropsHeadsUp() {
-        let routine = makeBatch(hour: 9)
+        let routine = makeRoutine(hour: 9)
         let plan = ReminderScheduler.plan(
             routines: [routine], now: nowBefore(routine), horizonDays: 1,
             graceMinutes: 120, headsUpEnabled: false, masterEnabled: true)
@@ -60,7 +60,7 @@ struct ReminderSchedulerTests {
 
     @Test
     func testFollowUpsClippedToGraceWindow() {
-        let routine = makeBatch(hour: 9)
+        let routine = makeRoutine(hour: 9)
         // 60-minute grace → only the +30 follow-up is strictly before the cutoff.
         let plan = ReminderScheduler.plan(
             routines: [routine], now: nowBefore(routine), horizonDays: 1,
@@ -70,7 +70,7 @@ struct ReminderSchedulerTests {
 
     @Test
     func testMasterDisabledEmitsNothing() {
-        let routine = makeBatch(hour: 9)
+        let routine = makeRoutine(hour: 9)
         let plan = ReminderScheduler.plan(
             routines: [routine], now: nowBefore(routine), horizonDays: 1,
             graceMinutes: 120, headsUpEnabled: true, masterEnabled: false)
@@ -79,7 +79,7 @@ struct ReminderSchedulerTests {
 
     @Test
     func testPastFireDatesAreOmitted() {
-        let routine = makeBatch(hour: 9)
+        let routine = makeRoutine(hour: 9)
         // now = slot + 40 min → headsUp, due, +30 are in the past; only +60, +90 remain.
         let now = DayQuery.slotDate(for: routine, on: .now).addingTimeInterval(40 * 60)
         let plan = ReminderScheduler.plan(
@@ -90,10 +90,10 @@ struct ReminderSchedulerTests {
     }
 
     @Test
-    func testWeekdayBatchAbsentOnExcludedDay() {
+    func testWeekdayRoutineAbsentOnExcludedDay() {
         let today = cal.component(.weekday, from: .now)
         let other = (today % 7) + 1   // a different weekday
-        let routine = makeBatch(hour: 9, recurrence: .weekdays, weekdays: [other])
+        let routine = makeRoutine(hour: 9, recurrence: .weekdays, weekdays: [other])
         let plan = ReminderScheduler.plan(
             routines: [routine], now: nowBefore(routine), horizonDays: 1,
             graceMinutes: 120, headsUpEnabled: true, masterEnabled: true)
@@ -102,9 +102,9 @@ struct ReminderSchedulerTests {
 
     @Test
     func testCompletedSlotIsSkipped() {
-        let routine = makeBatch(hour: 9)
+        let routine = makeRoutine(hour: 9)
         let slot = DayQuery.slotDate(for: routine, on: .now)
-        let key = ReminderScheduler.slotKey(batchUUID: routine.uuid.uuidString, slot: slot)
+        let key = ReminderScheduler.slotKey(routineUUID: routine.uuid.uuidString, slot: slot)
         let plan = ReminderScheduler.plan(
             routines: [routine], now: nowBefore(routine), horizonDays: 1,
             graceMinutes: 120, headsUpEnabled: true, masterEnabled: true,
@@ -114,7 +114,7 @@ struct ReminderSchedulerTests {
 
     @Test
     func testRespectsLimit() {
-        let routine = makeBatch(hour: 9)
+        let routine = makeRoutine(hour: 9)
         let plan = ReminderScheduler.plan(
             routines: [routine], now: nowBefore(routine), horizonDays: 1,
             graceMinutes: 120, headsUpEnabled: true, masterEnabled: true, limit: 2)
@@ -125,7 +125,7 @@ struct ReminderSchedulerTests {
 
     @Test
     func testIdentifiersAreUnique() {
-        let routine = makeBatch(hour: 9)
+        let routine = makeRoutine(hour: 9)
         let plan = ReminderScheduler.plan(
             routines: [routine], now: nowBefore(routine), horizonDays: 1,
             graceMinutes: 120, headsUpEnabled: true, masterEnabled: true)

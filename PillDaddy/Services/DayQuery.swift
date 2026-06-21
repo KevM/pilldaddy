@@ -69,7 +69,7 @@ enum DayQuery {
                         second: 0, of: start) ?? start
     }
 
-    /// Batches occurring on the day (in time-of-day order), each with active, non-PRN
+    /// Routines occurring on the day (in time-of-day order), each with active, non-PRN
     /// meds and any existing logs. Empty routines are omitted.
     static func routineDays(from routines: [Routine], on day: Date) -> [RoutineDay] {
         let cal = Calendar.current

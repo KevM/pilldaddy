@@ -9,15 +9,15 @@ struct AddToRoutineSheet: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @Query(sort: [SortDescriptor(\Routine.timeOfDay), SortDescriptor(\Routine.uuid)])
-    private var allBatches: [Routine]
+    private var allRoutines: [Routine]
 
-    @State private var selectedBatch: Routine?
+    @State private var selectedRoutine: Routine?
     @State private var quantity = 1.0
     @State private var errorMessage: String?
 
     private var available: [Routine] {
         let present = Set((medication.routineItems ?? []).compactMap { $0.routine?.persistentModelID })
-        return allBatches.filter { !present.contains($0.persistentModelID) }
+        return allRoutines.filter { !present.contains($0.persistentModelID) }
     }
 
     var body: some View {
@@ -27,7 +27,7 @@ struct AddToRoutineSheet: View {
                     Text("This medication is already in every routine.")
                         .foregroundStyle(.secondary)
                 } else {
-                    Picker("Routine", selection: $selectedBatch) {
+                    Picker("Routine", selection: $selectedRoutine) {
                         Text("Select…").tag(Routine?.none)
                         ForEach(available) { routine in
                             Text(routine.name.isEmpty ? "Routine" : routine.name).tag(Routine?.some(routine))
@@ -47,7 +47,7 @@ struct AddToRoutineSheet: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Add") { add() }
-                        .disabled(selectedBatch == nil ||
+                        .disabled(selectedRoutine == nil ||
                                   DoseAllocation.isOverTarget(
                                     allocated: DoseAllocation.allocated(medication) + quantity,
                                     target: medication.dailyDoseTarget))
@@ -68,7 +68,7 @@ struct AddToRoutineSheet: View {
     }
 
     private func add() {
-        guard let routine = selectedBatch else { return }
+        guard let routine = selectedRoutine else { return }
         do {
             try MedicationService.addToRoutine(medication, routine, quantity: quantity, in: context)
             dismiss()
@@ -88,13 +88,13 @@ struct MoveRoutineSheet: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @Query(sort: [SortDescriptor(\Routine.timeOfDay), SortDescriptor(\Routine.uuid)])
-    private var allBatches: [Routine]
+    private var allRoutines: [Routine]
 
     @State private var errorMessage: String?
 
     private var available: [Routine] {
         let present = Set((item.medication?.routineItems ?? []).compactMap { $0.routine?.persistentModelID })
-        return allBatches.filter { !present.contains($0.persistentModelID) }
+        return allRoutines.filter { !present.contains($0.persistentModelID) }
     }
 
     var body: some View {

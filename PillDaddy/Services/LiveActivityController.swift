@@ -18,7 +18,7 @@ enum LiveActivityController {
         }
 
         let grace = TimeInterval(graceMinutes) * 60
-        guard let focus = focusBatch(routines: routines, now: now, grace: grace) else {
+        guard let focus = focusRoutine(routines: routines, now: now, grace: grace) else {
             endAll(running)
             return
         }
@@ -30,16 +30,16 @@ enum LiveActivityController {
             scheduledDate: slot, graceEndDate: graceEnd, tier: tier)
         let content = ActivityContent(state: state, staleDate: graceEnd)
 
-        if let existing = running.first(where: { $0.attributes.batchID == focus.uuid.uuidString }) {
+        if let existing = running.first(where: { $0.attributes.routineID == focus.uuid.uuidString }) {
             Task { await existing.update(content) }
             // end any other stale activities
-            for a in running where a.attributes.batchID != focus.uuid.uuidString {
+            for a in running where a.attributes.routineID != focus.uuid.uuidString {
                 Task { await a.end(nil, dismissalPolicy: .immediate) }
             }
         } else {
             endAll(running)
             let attributes = PillReminderAttributes(
-                batchID: focus.uuid.uuidString, batchName: focus.name,
+                routineID: focus.uuid.uuidString, routineName: focus.name,
                 colorHex: focus.colorHex, medCount: activeMedCount(focus))
             _ = try? Activity.request(attributes: attributes, content: content)
         }
@@ -47,7 +47,7 @@ enum LiveActivityController {
 
     /// Earliest routine today whose slot is in the pester window [slot, slot+grace)
     /// and is not fully logged.
-    private static func focusBatch(routines: [Routine], now: Date, grace: TimeInterval) -> Routine? {
+    private static func focusRoutine(routines: [Routine], now: Date, grace: TimeInterval) -> Routine? {
         DayQuery.routineDays(from: routines, on: now)
             .filter { !$0.isCompleted }
             .filter { now >= $0.slotDate && now < $0.slotDate.addingTimeInterval(grace) }

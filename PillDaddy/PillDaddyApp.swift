@@ -23,8 +23,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     // Tap → focus the routine on the Today tab.
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 didReceive response: UNNotificationResponse) async {
-        if let uuid = response.notification.request.content.userInfo["batchUUID"] as? String {
-            await MainActor.run { router.pendingBatchUUID = uuid }
+        if let uuid = response.notification.request.content.userInfo["routineUUID"] as? String {
+            await MainActor.run { router.pendingRoutineUUID = uuid }
         }
     }
 }
@@ -67,7 +67,7 @@ struct PillDaddyApp: App {
                 .environment(settings)
                 .onOpenURL { url in
                     if url.scheme == "pilldaddy", url.host == "routine" {
-                        appDelegate.router.pendingBatchUUID = url.lastPathComponent
+                        appDelegate.router.pendingRoutineUUID = url.lastPathComponent
                     }
                 }
                 .onChange(of: scenePhase) { _, phase in

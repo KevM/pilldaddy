@@ -15,7 +15,7 @@ struct RoutineQueryTests {
     }
 
     @Test
-    func testActiveBatchGroupsExcludeDiscontinuedAndPRN() throws {
+    func testActiveRoutineGroupsExcludeDiscontinuedAndPRN() throws {
         let blue = Routine(name: "Blue")
         context.insert(blue)
 
@@ -52,7 +52,7 @@ struct RoutineQueryTests {
     }
 
     @Test
-    func testActiveBatchGroupsSortByTimeOfDay() throws {
+    func testActiveRoutineGroupsSortByTimeOfDay() throws {
         func at(_ h: Int) -> Date { Calendar.current.date(bySettingHour: h, minute: 0, second: 0, of: .now)! }
         
         let evening = Routine(name: "Evening", timeOfDay: at(19))

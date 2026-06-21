@@ -17,7 +17,7 @@ struct DoseLogServicePRNTests {
     private func logs() throws -> [DoseLog] { try context.fetch(FetchDescriptor<DoseLog>()) }
 
     @Test
-    func testLogPRNCreatesBatchItemNilRowAndIsRepeatable() throws {
+    func testLogPRNCreatesRoutineItemNilRowAndIsRepeatable() throws {
         let med = Medication(name: "Acetaminophen", strengthValue: 500, strengthUnit: "mg", dailyDoseTarget: 1.0, isPRN: true)
         context.insert(med)
         DoseLogService.logPRN(med, takenAt: .now, quantity: 2.0, note: "headache", in: context)

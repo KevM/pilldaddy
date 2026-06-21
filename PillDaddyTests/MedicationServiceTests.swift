@@ -14,7 +14,7 @@ struct MedicationServiceTests {
     }
 
     @Test
-    func testAddScheduledMedicationCreatesBatchItemsAndAddedEvent() throws {
+    func testAddScheduledMedicationCreatesRoutineItemsAndAddedEvent() throws {
         let blue = Routine(name: "Blue", colorHex: "#3B82F6")
         let green = Routine(name: "Green", colorHex: "#10B981")
         context.insert(blue)
@@ -249,7 +249,7 @@ struct MedicationServiceTests {
     }
 
     @Test
-    func testAddToBatchWithinRemainingInserts() throws {
+    func testAddToRoutineWithinRemainingInserts() throws {
         let blue = Routine(name: "Blue")
         context.insert(blue)
         let med = try MedicationService.addMedication(
@@ -264,7 +264,7 @@ struct MedicationServiceTests {
     }
 
     @Test
-    func testAddToBatchExceedingRemainingThrows() throws {
+    func testAddToRoutineExceedingRemainingThrows() throws {
         let blue = Routine(name: "Blue")
         context.insert(blue)
         let med = try MedicationService.addMedication(
@@ -333,7 +333,7 @@ struct MedicationServiceTests {
     }
 
     @Test
-    func testAddToBatchWritesScheduleChangedEvent() throws {
+    func testAddToRoutineWritesScheduleChangedEvent() throws {
         let blue = Routine(name: "Morning")
         context.insert(blue)
         let med = Medication(name: "Metoprolol", strengthValue: 30, strengthUnit: "mg",
@@ -352,7 +352,7 @@ struct MedicationServiceTests {
     }
 
     @Test
-    func testAddToBatchStillEnforcesAllocationCap() throws {
+    func testAddToRoutineStillEnforcesAllocationCap() throws {
         let blue = Routine(name: "Morning")
         context.insert(blue)
         let med = Medication(name: "Metoprolol", strengthValue: 30, strengthUnit: "mg",
@@ -366,7 +366,7 @@ struct MedicationServiceTests {
     }
 
     @Test
-    func testRemoveFromBatchDeletesItemAndWritesEvent() throws {
+    func testRemoveFromRoutineDeletesItemAndWritesEvent() throws {
         let blue = Routine(name: "Morning")
         context.insert(blue)
         let med = Medication(name: "Metoprolol", strengthValue: 30, strengthUnit: "mg",
@@ -386,7 +386,7 @@ struct MedicationServiceTests {
     }
 
     @Test
-    func testMoveToBatchPreservesQuantityAndWritesOldNewEvent() throws {
+    func testMoveToRoutinePreservesQuantityAndWritesOldNewEvent() throws {
         let morning = Routine(name: "Morning")
         let afternoon = Routine(name: "Afternoon")
         context.insert(morning); context.insert(afternoon)
@@ -409,7 +409,7 @@ struct MedicationServiceTests {
     }
 
     @Test
-    func testMoveToBatchRejectsDuplicateMembership() throws {
+    func testMoveToRoutineRejectsDuplicateMembership() throws {
         let morning = Routine(name: "Morning")
         let afternoon = Routine(name: "Afternoon")
         context.insert(morning); context.insert(afternoon)
@@ -427,7 +427,7 @@ struct MedicationServiceTests {
     }
 
     @Test
-    func testDeleteBatchThrowsWhenActiveMedicationPresent() throws {
+    func testDeleteRoutineThrowsWhenActiveMedicationPresent() throws {
         let routine = Routine(name: "Morning")
         context.insert(routine)
         let med = Medication(name: "Metoprolol", strengthValue: 30, strengthUnit: "mg",
@@ -443,7 +443,7 @@ struct MedicationServiceTests {
     }
 
     @Test
-    func testDeleteBatchSucceedsWhenNoActiveMedsAndPreservesDoseLogSnapshots() throws {
+    func testDeleteRoutineSucceedsWhenNoActiveMedsAndPreservesDoseLogSnapshots() throws {
         let routine = Routine(name: "Morning", colorHex: "#3B82F6")
         context.insert(routine)
         let med = Medication(name: "Metoprolol", strengthValue: 30, strengthUnit: "mg",
@@ -469,7 +469,7 @@ struct MedicationServiceTests {
     }
 
     @Test
-    func testAddToBatchRejectsDuplicateMembership() throws {
+    func testAddToRoutineRejectsDuplicateMembership() throws {
         let blue = Routine(name: "Blue")
         context.insert(blue)
         let med = Medication(name: "Metoprolol", strengthValue: 30, strengthUnit: "mg",

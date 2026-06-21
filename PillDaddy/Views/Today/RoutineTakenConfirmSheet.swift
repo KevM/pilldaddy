@@ -112,7 +112,7 @@ struct RoutineTakenConfirmSheet: View {
 
     private func confirm() {
         let fill = unlogged.map(\.item) + skipped.filter { flipped.contains($0.id) }.map(\.item) + missed.filter { flipped.contains($0.id) }.map(\.item)
-        DoseLogService.logBatchTaken(routineDay.routine, on: day, items: fill,
+        DoseLogService.logRoutineTaken(routineDay.routine, on: day, items: fill,
                                      takenAt: takenAt, note: note, in: context)
         dismiss()
     }

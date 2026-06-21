@@ -31,11 +31,11 @@ struct DoseLogServiceTests {
     private func logs() throws -> [DoseLog] { try context.fetch(FetchDescriptor<DoseLog>()) }
 
     @Test
-    func testLogBatchTakenWritesOneRowPerItemWithSnapshotsAndQuantity() throws {
+    func testLogRoutineTakenWritesOneRowPerItemWithSnapshotsAndQuantity() throws {
         let a = addMed("A", qty: 0.5)
         let b = addMed("B", qty: 1.0)
         let at = Date.now
-        DoseLogService.logBatchTaken(blue, on: .now, items: [a, b], takenAt: at, note: "", in: context)
+        DoseLogService.logRoutineTaken(blue, on: .now, items: [a, b], takenAt: at, note: "", in: context)
 
         let all = try logs()
         #expect(all.count == 2)
@@ -47,21 +47,21 @@ struct DoseLogServiceTests {
     }
 
     @Test
-    func testLogBatchTakenIsIdempotentUpsert() throws {
+    func testLogRoutineTakenIsIdempotentUpsert() throws {
         let a = addMed("A", qty: 1.0)
-        DoseLogService.logBatchTaken(blue, on: .now, items: [a], takenAt: .now, note: "", in: context)
-        DoseLogService.logBatchTaken(blue, on: .now, items: [a], takenAt: .now, note: "", in: context)
+        DoseLogService.logRoutineTaken(blue, on: .now, items: [a], takenAt: .now, note: "", in: context)
+        DoseLogService.logRoutineTaken(blue, on: .now, items: [a], takenAt: .now, note: "", in: context)
         #expect(try logs().count == 1)   // updated, not duplicated
     }
 
     @Test
-    func testLogBatchTakenLeavesUntouchedItemsAlone() throws {
+    func testLogRoutineTakenLeavesUntouchedItemsAlone() throws {
         let a = addMed("A", qty: 1.0)
         let b = addMed("B", qty: 1.0)
         // B already skipped individually
         try DoseLogService.logMed(b, on: .now, status: .skipped, takenAt: nil, note: "BP low", in: context)
         // Routine-take only A (fill set excludes B)
-        DoseLogService.logBatchTaken(blue, on: .now, items: [a], takenAt: .now, note: "", in: context)
+        DoseLogService.logRoutineTaken(blue, on: .now, items: [a], takenAt: .now, note: "", in: context)
 
         let bLog = try #require(try logs().first { $0.snapshotMedName == "B" })
         #expect(bLog.status == DoseStatus.skipped.rawValue)   // skip preserved
@@ -93,24 +93,24 @@ struct DoseLogServiceTests {
     @Test
     func testRevertDeletesTheSlotRow() throws {
         let a = addMed("A", qty: 1.0)
-        DoseLogService.logBatchTaken(blue, on: .now, items: [a], takenAt: .now, note: "", in: context)
+        DoseLogService.logRoutineTaken(blue, on: .now, items: [a], takenAt: .now, note: "", in: context)
         DoseLogService.revert(a, on: .now, in: context)
         #expect(try logs().count == 0)
     }
 
     @Test
-    func testRevertBatchDeletesAllSlotRows() throws {
+    func testRevertRoutineDeletesAllSlotRows() throws {
         let a = addMed("A", qty: 1.0)
         let b = addMed("B", qty: 1.0)
-        DoseLogService.logBatchTaken(blue, on: .now, items: [a, b], takenAt: .now, note: "", in: context)
-        DoseLogService.revertBatch(blue, on: .now, items: [a, b], in: context)
+        DoseLogService.logRoutineTaken(blue, on: .now, items: [a, b], takenAt: .now, note: "", in: context)
+        DoseLogService.revertRoutine(blue, on: .now, items: [a, b], in: context)
         #expect(try logs().count == 0)
     }
 
     @Test
     func testSnapshotStaysFrozenAfterRename() throws {
         let a = addMed("A", qty: 1.0)
-        DoseLogService.logBatchTaken(blue, on: .now, items: [a], takenAt: .now, note: "", in: context)
+        DoseLogService.logRoutineTaken(blue, on: .now, items: [a], takenAt: .now, note: "", in: context)
         a.medication?.name = "Renamed"
         try context.save()
         #expect(try #require(try logs().first).snapshotMedName == "A")

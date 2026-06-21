@@ -6,7 +6,7 @@ import Testing
 @MainActor
 struct SeedDataTests {
     @Test
-    func testSeedPopulatesWorkedExampleRegime() throws {
+    func testSeedPopulatesWorkedExampleRoutines() throws {
         let container = try ModelTestSupport.makeContainer()
         let context = container.mainContext
 

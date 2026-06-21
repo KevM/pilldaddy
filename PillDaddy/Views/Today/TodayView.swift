@@ -58,7 +58,7 @@ struct TodayView: View {
             .onAppear(perform: autoExpand)
             .onAppear { focusFromRouter() }
             .onChange(of: selectedDay) { _, _ in autoExpand() }
-            .onChange(of: router.pendingBatchUUID) { _, _ in focusFromRouter() }
+            .onChange(of: router.pendingRoutineUUID) { _, _ in focusFromRouter() }
             .onChange(of: routineDays.map { $0.state }) { _, _ in
                 autoExpand()
                 ReminderSync.refresh(context: context, settings: settings)
@@ -91,7 +91,7 @@ struct TodayView: View {
     }
 
     private func revert(_ day: DayQuery.RoutineDay) {
-        DoseLogService.revertBatch(day.routine, on: selectedDay, items: day.meds.map(\.item), in: context)
+        DoseLogService.revertRoutine(day.routine, on: selectedDay, items: day.meds.map(\.item), in: context)
     }
 
     /// On today, expand the routine whose slot time is closest to now and not yet fully
@@ -107,12 +107,12 @@ struct TodayView: View {
 
     /// Honor a deep link: jump to today and expand the requested routine.
     private func focusFromRouter() {
-        guard let uuid = router.pendingBatchUUID else { return }
+        guard let uuid = router.pendingRoutineUUID else { return }
         if let routine = routines.first(where: { $0.uuid.uuidString == uuid }) {
             selectedDay = .now
             expandedID = routine.persistentModelID
         }
-        router.pendingBatchUUID = nil
+        router.pendingRoutineUUID = nil
     }
 }
 

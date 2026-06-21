@@ -15,7 +15,7 @@ enum DoseLogService {
 
     /// Marks the given items taken for the routine's slot on `day` (the fill set the
     /// confirm sheet computed). Items not passed are left untouched. Optional note.
-    static func logBatchTaken(
+    static func logRoutineTaken(
         _ routine: Routine, on day: Date, items: [RoutineItem],
         takenAt: Date, note: String, in context: ModelContext
     ) {
@@ -42,7 +42,7 @@ enum DoseLogService {
     }
 
     /// Deletes the slot rows for all given items on `day` (back to unlogged).
-    static func revertBatch(_ routine: Routine, on day: Date, items: [RoutineItem], in context: ModelContext) {
+    static func revertRoutine(_ routine: Routine, on day: Date, items: [RoutineItem], in context: ModelContext) {
         for item in items {
             if let log = existingLog(for: item, on: day) { context.delete(log) }
         }

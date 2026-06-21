@@ -16,7 +16,7 @@ enum ReminderScheduler {
 
     struct Planned: Equatable {
         let identifier: String
-        let batchUUID: String
+        let routineUUID: String
         let fireDate: Date
         let kind: ReminderKind
         let title: String
@@ -24,8 +24,8 @@ enum ReminderScheduler {
     }
 
     /// Stable per-slot key used to skip already-logged routines.
-    static func slotKey(batchUUID: String, slot: Date) -> String {
-        "\(batchUUID)|\(Int(slot.timeIntervalSince1970))"
+    static func slotKey(routineUUID: String, slot: Date) -> String {
+        "\(routineUUID)|\(Int(slot.timeIntervalSince1970))"
     }
 
     /// The notifications to schedule across `horizonDays` starting at `now`'s day.
@@ -50,7 +50,7 @@ enum ReminderScheduler {
                 let medCount = activeMedCount(routine)
                 guard medCount > 0 else { continue }
                 let slot = DayQuery.slotDate(for: routine, on: day)
-                let key = slotKey(batchUUID: routine.uuid.uuidString, slot: slot)
+                let key = slotKey(routineUUID: routine.uuid.uuidString, slot: slot)
                 guard !completedSlots.contains(key) else { continue }
 
                 if headsUpEnabled {
@@ -97,7 +97,7 @@ enum ReminderScheduler {
             body = "\(meds) not logged yet"
         }
         let id = "\(routine.uuid.uuidString)|\(Int(slot.timeIntervalSince1970))|\(kind.rawValue)|\(offsetMinutes)"
-        return Planned(identifier: id, batchUUID: routine.uuid.uuidString,
+        return Planned(identifier: id, routineUUID: routine.uuid.uuidString,
                        fireDate: fire, kind: kind, title: title, body: body)
     }
 
@@ -109,7 +109,7 @@ enum ReminderScheduler {
         for offset in 0..<max(horizonDays, 0) {
             guard let day = cal.date(byAdding: .day, value: offset, to: now) else { continue }
             for bd in DayQuery.routineDays(from: routines, on: day) where bd.isCompleted {
-                keys.insert(slotKey(batchUUID: bd.routine.uuid.uuidString, slot: bd.slotDate))
+                keys.insert(slotKey(routineUUID: bd.routine.uuid.uuidString, slot: bd.slotDate))
             }
         }
         return keys
@@ -139,7 +139,7 @@ enum ReminderScheduler {
             content.title = p.title
             content.body = p.body
             content.sound = .default
-            content.userInfo = ["batchUUID": p.batchUUID]
+            content.userInfo = ["routineUUID": p.routineUUID]
             let comps = cal.dateComponents([.year, .month, .day, .hour, .minute], from: p.fireDate)
             let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)
             center.add(UNNotificationRequest(identifier: p.identifier, content: content, trigger: trigger))

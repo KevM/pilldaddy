@@ -10,7 +10,7 @@ import Testing
 struct DoseLogMigrationTests {
 
     @Test
-    func testBackfillTagsLegacyNilBatchItemLogsAsPRN() throws {
+    func testBackfillTagsLegacyNilRoutineItemLogsAsPRN() throws {
         let userDefaultsKey = "didRunDoseLogPRNBackfill"
         UserDefaults.standard.set(false, forKey: userDefaultsKey)
         defer { UserDefaults.standard.removeObject(forKey: userDefaultsKey) }
@@ -43,7 +43,7 @@ struct DoseLogMigrationTests {
     }
 
     @Test
-    func testBackfillSkippedIfAlreadyRunOrAfterBatchDeletion() throws {
+    func testBackfillSkippedIfAlreadyRunOrAfterRoutineDeletion() throws {
         let userDefaultsKey = "didRunDoseLogPRNBackfill"
         UserDefaults.standard.set(false, forKey: userDefaultsKey)
         defer { UserDefaults.standard.removeObject(forKey: userDefaultsKey) }

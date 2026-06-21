@@ -1,17 +1,17 @@
 import SwiftUI
 import SwiftData
 
-/// Host for the Meds tab: Regime ⇄ All Meds toggle and an add menu.
+/// Host for the Meds tab: Routines ⇄ All Meds toggle and an add menu.
 struct MedsView: View {
     enum Mode: String, CaseIterable, Identifiable {
-        case routines = "Regime"
+        case routines = "Routines"
         case allMeds = "All Meds"
         var id: String { rawValue }
     }
 
     @State private var mode: Mode = .routines
     @State private var showingAddMed = false
-    @State private var showingAddBatch = false
+    @State private var showingAddRoutine = false
 
     var body: some View {
         NavigationStack {
@@ -39,14 +39,14 @@ struct MedsView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Button("Add medication") { showingAddMed = true }
-                        Button("Add routine") { showingAddBatch = true }
+                        Button("Add routine") { showingAddRoutine = true }
                     } label: {
                         Image(systemName: "plus")
                     }
                 }
             }
             .sheet(isPresented: $showingAddMed) { MedicationEditor(mode: .add) }
-            .sheet(isPresented: $showingAddBatch) { RoutineEditor(routine: nil) }
+            .sheet(isPresented: $showingAddRoutine) { RoutineEditor(routine: nil) }
         }
     }
 }
