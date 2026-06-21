@@ -39,6 +39,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: rodeo.fm.routine
         CODE_SIGN_ENTITLEMENTS: RoutineDosePlanner/RoutineDosePlanner.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     dependencies:
       - target: RoutineDosePlannerWidgets
         embed: true
