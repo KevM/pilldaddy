@@ -7,6 +7,6 @@ enum ModelTestSupport {
     @MainActor
     static func makeContainer() throws -> ModelContainer {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        return try ModelContainer(for: RoutineSchema.schema, configurations: config)
+        return try ModelContainer(for: RoutineDoseSchema.schema, configurations: config)
     }
 }

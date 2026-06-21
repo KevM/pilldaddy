@@ -41,11 +41,11 @@ struct RoutineDosePlannerApp: App {
     init() {
         do {
             let config = ModelConfiguration(
-                schema: RoutineSchema.schema,
+                schema: RoutineDoseSchema.schema,
                 isStoredInMemoryOnly: false,
                 cloudKitDatabase: .automatic
             )
-            container = try ModelContainer(for: RoutineSchema.schema, configurations: config)
+            container = try ModelContainer(for: RoutineDoseSchema.schema, configurations: config)
         } catch {
             fatalError("Failed to initialize ModelContainer: \(error)")
         }

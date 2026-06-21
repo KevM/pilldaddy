@@ -6,7 +6,7 @@ import SwiftData
 enum PreviewSupport {
     static func seededContainer() -> ModelContainer {
         let container = try! ModelContainer(
-            for: RoutineSchema.schema,
+            for: RoutineDoseSchema.schema,
             configurations: ModelConfiguration(isStoredInMemoryOnly: true))
         SeedData.seedIfEmpty(container.mainContext)
         try? container.mainContext.save()

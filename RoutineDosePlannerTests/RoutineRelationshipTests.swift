@@ -64,7 +64,7 @@ struct RoutineRelationshipTests {
     @Test
     func deletingRoutineKeepsDoseLogs() throws {
         let container = try ModelContainer(
-            for: RoutineSchema.schema,
+            for: RoutineDoseSchema.schema,
             configurations: ModelConfiguration(isStoredInMemoryOnly: true))
         let ctx = container.mainContext
         let med = Medication(name: "Test", isActive: false)
