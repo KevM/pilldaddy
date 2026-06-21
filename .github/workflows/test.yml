@@ -10,6 +10,8 @@ jobs:
   test:
     name: Build & Test
     runs-on: macos-15
+    env:
+      HOMEBREW_NO_REQUIRE_TAP_TRUST: 1
 
     steps:
       - name: Checkout Code
