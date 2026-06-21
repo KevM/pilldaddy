@@ -28,3 +28,84 @@ Epic provides a developer sandbox where you can configure **OAuth 2.0** authenti
  * This grants your app a secure token.
  * Your app can then make POST requests to write Observation resources straight to the clinic's database.
 > **Development Tip:** Even if you start with Method A, build your internal CoreData or SwiftData schema to mirror the FHIR spec from day one. Map your metrics to LOINC codes and your medications to RxNorm IDs. That way, when you are ready to transition to a live API sync with Epic, your data pipeline is already complete.
+
+## 3. Example: Blood Pressure FHIR Observation Payload
+
+Because blood pressure consists of two separate numbers (systolic and diastolic) recorded at the exact same moment, FHIR handles it as a single **Observation** resource using a **component** array.
+
+Here is a complete, production-ready FHIR JSON payload tracking a blood pressure reading of **120/80 mmHg**. It utilizes the standard **LOINC codes** that systems like Epic and Cerner look for to automatically map the data into a clinic's vitals flowsheet.
+
+```json
+{
+  "resourceType": "Observation",
+  "status": "final",
+  "category": [
+    {
+      "coding": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+          "code": "vital-signs",
+          "display": "Vital Signs"
+        }
+      ]
+    }
+  ],
+  "code": {
+    "coding": [
+      {
+        "system": "http://loinc.org",
+        "code": "85354-9",
+        "display": "Blood pressure panel with all children optional"
+      }
+    ],
+    "text": "Blood Pressure"
+  },
+  "effectiveDateTime": "2026-06-21T05:35:00-05:00",
+  "issued": "2026-06-21T05:35:10-05:00",
+  "component": [
+    {
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8480-6",
+            "display": "Systolic blood pressure"
+          }
+        ]
+      },
+      "valueQuantity": {
+        "value": 120,
+        "unit": "mmHg",
+        "system": "http://unitsofmeasure.org",
+        "code": "mm[Hg]"
+      }
+    },
+    {
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "8462-4",
+            "display": "Diastolic blood pressure"
+          }
+        ]
+      },
+      "valueQuantity": {
+        "value": 80,
+        "unit": "mmHg",
+        "system": "http://unitsofmeasure.org",
+        "code": "mm[Hg]"
+      }
+    }
+  ]
+}
+```
+
+### Breaking Down the Critical Epic Integration Keys:
+ 1. **status**: Must be set to "final" for clinical records systems to display it to providers without a "preliminary" warning flag.
+ 2. **code.coding[0].code (85354-9)**: This is the universal LOINC code for a Blood Pressure Panel. Epic uses this to know that the object contains both systolic and diastolic data inside its components.
+ 3. **effectiveDateTime**: The exact timestamp when the caregiver took the reading.
+ 4. **component Array**:
+   * The first block uses LOINC **8480-6** to isolate the **Systolic** value.
+   * The second block uses LOINC **8462-4** to isolate the **Diastolic** value.
+ 5. **valueQuantity.code (mm[Hg])**: Healthcare systems require standard UCUM (Unified Code for Units of Measure) strings. Passing "mmHg" in the display unit is nice for humans, but Epic's backend validates against the code "mm[Hg]".
