@@ -13,6 +13,8 @@ final class Medication {
     var isPRN: Bool = false                // as-needed; no batch memberships
     var createdAt: Date = Date.now
     var discontinuedAt: Date? = nil
+    var uuid: UUID = UUID()
+    var rxNormCode: String = ""            // RXCUI; empty until RxNorm lookup is wired up
 
     @Relationship(deleteRule: .cascade, inverse: \BatchItem.medication)
     var batchItems: [BatchItem]? = []
@@ -35,7 +37,8 @@ final class Medication {
     init(name: String = "", strengthValue: Double = 0, strengthUnit: String = "mg",
          dailyDoseTarget: Double = 1, form: String = "tablet",
          generalNotes: String = "", isActive: Bool = true, isPRN: Bool = false,
-         createdAt: Date = .now, discontinuedAt: Date? = nil) {
+         createdAt: Date = .now, discontinuedAt: Date? = nil,
+         uuid: UUID = UUID(), rxNormCode: String = "") {
         self.name = name
         self.strengthValue = strengthValue
         self.strengthUnit = strengthUnit
@@ -46,5 +49,7 @@ final class Medication {
         self.isPRN = isPRN
         self.createdAt = createdAt
         self.discontinuedAt = discontinuedAt
+        self.uuid = uuid
+        self.rxNormCode = rxNormCode
     }
 }

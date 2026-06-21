@@ -8,6 +8,7 @@ final class DoseLog {
     var status: String = DoseStatus.taken.rawValue
     var quantity: Double = 1.0
     var notes: String = ""
+    var uuid: UUID = UUID()
 
     // snapshot fields, frozen at log time
     var snapshotMedName: String = ""
@@ -21,7 +22,7 @@ final class DoseLog {
     var batchItem: BatchItem? = nil          // nil for PRN logs
 
     init(scheduledDate: Date = .now, takenAt: Date? = nil, status: DoseStatus = .taken,
-         quantity: Double = 1.0, notes: String = "",
+         quantity: Double = 1.0, notes: String = "", uuid: UUID = UUID(),
          snapshotMedName: String = "", snapshotStrength: String = "",
          snapshotStrengthValue: Double = 0, snapshotStrengthUnit: String = "mg",
          snapshotBatchColorHex: String = "", isPRN: Bool = false,
@@ -31,6 +32,7 @@ final class DoseLog {
         self.status = status.rawValue
         self.quantity = quantity
         self.notes = notes
+        self.uuid = uuid
         self.snapshotMedName = snapshotMedName
         self.snapshotStrength = snapshotStrength
         self.snapshotStrengthValue = snapshotStrengthValue
