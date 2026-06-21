@@ -4,7 +4,7 @@
 <dict>
 	<key>com.apple.developer.icloud-container-identifiers</key>
 	<array>
-		<string>iCloud.com.pilldaddy.PillDaddy</string>
+		<string>iCloud.rodeo.fm.PillDaddy</string>
 	</array>
 	<key>com.apple.developer.icloud-services</key>
 	<array>
