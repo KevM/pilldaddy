@@ -24,12 +24,7 @@ struct SwapSheet: View {
             Form {
                 Section("Replacement drug") {
                     TextField("Name", text: $name)
-                    HStack {
-                        TextField("Strength", value: $strengthValue, format: .number)
-                            .keyboardType(.decimalPad)
-                        TextField("Unit", text: $strengthUnit)
-                            .frame(maxWidth: 80)
-                    }
+                    StrengthInputField(value: $strengthValue, unit: $strengthUnit)
                     TextField("Form", text: $form)
                 }
                 Section("Schedule") {

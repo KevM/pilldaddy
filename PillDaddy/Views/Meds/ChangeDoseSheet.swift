@@ -32,12 +32,7 @@ struct ChangeDoseSheet: View {
         NavigationStack {
             Form {
                 Section("New dose") {
-                    HStack {
-                        TextField("Strength", value: $strengthValue, format: .number)
-                            .keyboardType(.decimalPad)
-                        TextField("Unit", text: $strengthUnit)
-                            .frame(maxWidth: 80)
-                    }
+                    StrengthInputField(value: $strengthValue, unit: $strengthUnit)
 
                     DoseQuantityField(title: "Doses per day", value: $target)
 

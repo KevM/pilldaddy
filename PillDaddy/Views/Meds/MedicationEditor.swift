@@ -49,12 +49,7 @@ struct MedicationEditor: View {
                 Section("Details") {
                     TextField("Name", text: $name)
                     if isAdd {
-                        HStack {
-                            TextField("Strength", value: $strengthValue, format: .number)
-                                .keyboardType(.decimalPad)
-                            TextField("Unit", text: $strengthUnit)
-                                .frame(maxWidth: 80)
-                        }
+                        StrengthInputField(value: $strengthValue, unit: $strengthUnit)
                     }
                     TextField("Form (e.g. tablet)", text: $form)
                     Toggle("As needed (PRN)", isOn: $isPRN)
