@@ -25,3 +25,14 @@ The elderly often take many medications and different times and with different r
 
 - iCloud data for durability 
 - Metrics should sync to Apple Health. Two way sync is not important for now.
+
+## CI/CD & Deployment
+
+The static marketing website located in the `web/` folder is automatically deployed to Vercel upon successful completion of the **CI** workflow on the `main` branch. 
+
+To enable this automation, the following GitHub Secrets must be configured in your repository settings:
+
+* `VERCEL_TOKEN`: Your Vercel Personal Access Token (for authentication).
+* `VERCEL_ORG_ID`: Your Vercel Organization or User account ID.
+* `VERCEL_PROJECT_ID`: The unique Project ID of your PillDaddy Vercel project.
+
