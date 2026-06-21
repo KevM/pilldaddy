@@ -9,7 +9,6 @@ final class Batch {
     var mealRelation: String = MealRelation.none.rawValue
     var recurrenceKind: String = RecurrenceKind.daily.rawValue
     var weekdays: [Int]? = nil              // 1...7 when recurrenceKind == "weekdays"
-    var sortOrder: Int = 0
     var uuid: UUID = UUID()
 
 
@@ -18,13 +17,12 @@ final class Batch {
 
     init(name: String = "", colorHex: String = "#3B82F6", timeOfDay: Date = .now,
          mealRelation: MealRelation = .none, recurrenceKind: RecurrenceKind = .daily,
-         weekdays: [Int]? = nil, sortOrder: Int = 0) {
+         weekdays: [Int]? = nil) {
         self.name = name
         self.colorHex = colorHex
         self.timeOfDay = timeOfDay
         self.mealRelation = mealRelation.rawValue
         self.recurrenceKind = recurrenceKind.rawValue
         self.weekdays = weekdays
-        self.sortOrder = sortOrder
     }
 }

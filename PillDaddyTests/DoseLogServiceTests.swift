@@ -13,7 +13,7 @@ struct DoseLogServiceTests {
     init() throws {
         let container = try ModelTestSupport.makeContainer()
         let context = container.mainContext
-        let blue = Batch(name: "Blue", colorHex: "#3B82F6", timeOfDay: .now, sortOrder: 0)
+        let blue = Batch(name: "Blue", colorHex: "#3B82F6", timeOfDay: .now)
         context.insert(blue)
 
         self.container = container

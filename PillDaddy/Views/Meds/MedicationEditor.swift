@@ -14,7 +14,7 @@ struct MedicationEditor: View {
 
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
-    @Query(sort: [SortDescriptor(\Batch.sortOrder), SortDescriptor(\Batch.timeOfDay)])
+    @Query(sort: [SortDescriptor(\Batch.timeOfDay), SortDescriptor(\Batch.uuid)])
     private var batches: [Batch]
 
     @State private var name = ""

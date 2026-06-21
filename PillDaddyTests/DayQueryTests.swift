@@ -16,7 +16,7 @@ struct DayQueryTests {
 
     private func fetchBatches() throws -> [Batch] {
         try context.fetch(FetchDescriptor<Batch>(
-            sortBy: [SortDescriptor(\.sortOrder), SortDescriptor(\.timeOfDay)]))
+            sortBy: [SortDescriptor(\.timeOfDay), SortDescriptor(\.uuid)]))
     }
 
     @Test
@@ -40,8 +40,8 @@ struct DayQueryTests {
 
     @Test
     func testBatchDaysExcludeDiscontinuedAndPRNAndEmptyBatches() throws {
-        let blue = Batch(name: "Blue", sortOrder: 0)
-        let empty = Batch(name: "Empty", sortOrder: 1)
+        let blue = Batch(name: "Blue")
+        let empty = Batch(name: "Empty")
         context.insert(blue); context.insert(empty)
 
         let active = try MedicationService.addMedication(
@@ -62,7 +62,7 @@ struct DayQueryTests {
 
     @Test
     func testBatchDayStateReflectsExistingLogs() throws {
-        let blue = Batch(name: "Blue", timeOfDay: .now, sortOrder: 0)
+        let blue = Batch(name: "Blue", timeOfDay: .now)
         context.insert(blue)
         let med = try MedicationService.addMedication(
             name: "A", strengthValue: 1, strengthUnit: "mg", form: "tablet", isPRN: false, notes: "",
@@ -157,7 +157,7 @@ struct DayQueryTests {
 
     @Test
     func testBatchDayStateAndIsCompletedAllStatuses() throws {
-        let blue = Batch(name: "Blue", timeOfDay: .now, sortOrder: 0)
+        let blue = Batch(name: "Blue", timeOfDay: .now)
         context.insert(blue)
         let medA = try MedicationService.addMedication(
             name: "A", strengthValue: 1, strengthUnit: "mg", form: "tablet", isPRN: false, notes: "",

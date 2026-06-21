@@ -1,3 +1,4 @@
+import Foundation
 import SwiftData
 import Testing
 @testable import PillDaddy
@@ -15,7 +16,7 @@ struct RegimeQueryTests {
 
     @Test
     func testActiveBatchGroupsExcludeDiscontinuedAndPRN() throws {
-        let blue = Batch(name: "Blue", sortOrder: 0)
+        let blue = Batch(name: "Blue")
         context.insert(blue)
 
         let active = try MedicationService.addMedication(
@@ -48,6 +49,23 @@ struct RegimeQueryTests {
 
         let prn = try RegimeQuery.activePRNMeds(in: context)
         #expect(prn.map(\.name) == ["Tylenol"])
+    }
+
+    @Test
+    func testActiveBatchGroupsSortByTimeOfDay() throws {
+        func at(_ h: Int) -> Date { Calendar.current.date(bySettingHour: h, minute: 0, second: 0, of: .now)! }
+        
+        let evening = Batch(name: "Evening", timeOfDay: at(19))
+        let morning = Batch(name: "Morning", timeOfDay: at(7))
+        let midday = Batch(name: "Midday", timeOfDay: at(12))
+        
+        context.insert(evening)
+        context.insert(morning)
+        context.insert(midday)
+        try context.save()
+
+        let names = try RegimeQuery.activeBatchGroups(in: context).map { $0.batch.name }
+        #expect(names == ["Morning", "Midday", "Evening"])
     }
 }
 

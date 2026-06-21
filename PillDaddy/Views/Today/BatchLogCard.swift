@@ -96,7 +96,7 @@ struct BatchLogCard: View {
 #Preview {
     let container = PreviewSupport.seededContainer()
     let batches = try! container.mainContext.fetch(
-        FetchDescriptor<Batch>(sortBy: [SortDescriptor(\.sortOrder)]))
+        FetchDescriptor<Batch>(sortBy: [SortDescriptor(\.timeOfDay), SortDescriptor(\.uuid)]))
     let day = DayQuery.batchDays(from: batches, on: .now).first!
     return BatchLogCard(batchDay: day, isExpanded: true, onToggle: {},
                         onMarkAllTaken: {}, onAdjust: {}, onRevert: {})

@@ -12,10 +12,10 @@ enum RegimeQuery {
         var id: PersistentIdentifier { batch.persistentModelID }
     }
 
-    /// All batches (ordered by sortOrder then time), each with its active meds only.
+    /// All batches (ordered by time of day), each with its active meds only.
     static func activeBatchGroups(in context: ModelContext) throws -> [BatchGroup] {
         let batches = try context.fetch(FetchDescriptor<Batch>(
-            sortBy: [SortDescriptor(\.sortOrder), SortDescriptor(\.timeOfDay)]))
+            sortBy: [SortDescriptor(\.timeOfDay), SortDescriptor(\.uuid)]))
         return batches.map { batch in
             let items = (batch.items ?? [])
                 .filter { ($0.medication?.isActive ?? false) && !($0.medication?.isPRN ?? false) }

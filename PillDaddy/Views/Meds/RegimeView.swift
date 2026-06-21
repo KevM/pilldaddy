@@ -3,7 +3,7 @@ import SwiftData
 
 /// Active regime grouped under color batches, with a trailing PRN section.
 struct RegimeView: View {
-    @Query(sort: [SortDescriptor(\Batch.sortOrder), SortDescriptor(\Batch.timeOfDay)])
+    @Query(sort: [SortDescriptor(\Batch.timeOfDay), SortDescriptor(\Batch.uuid)])
     private var batches: [Batch]
     @Query(filter: #Predicate<Medication> { $0.isActive && $0.isPRN }, sort: \Medication.name)
     private var prnMeds: [Medication]

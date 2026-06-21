@@ -69,7 +69,7 @@ enum DayQuery {
                         second: 0, of: start) ?? start
     }
 
-    /// Batches occurring on the day (in their stored order), each with active, non-PRN
+    /// Batches occurring on the day (in time-of-day order), each with active, non-PRN
     /// meds and any existing logs. Empty batches are omitted.
     static func batchDays(from batches: [Batch], on day: Date) -> [BatchDay] {
         let cal = Calendar.current

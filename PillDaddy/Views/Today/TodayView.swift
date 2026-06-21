@@ -7,7 +7,7 @@ struct TodayView: View {
     @Environment(AppRouter.self) private var router
     @Environment(ReminderSettings.self) private var settings
 
-    @Query(sort: [SortDescriptor(\Batch.sortOrder), SortDescriptor(\Batch.timeOfDay)])
+    @Query(sort: [SortDescriptor(\Batch.timeOfDay), SortDescriptor(\Batch.uuid)])
     private var batches: [Batch]
     @Query(filter: #Predicate<Medication> { $0.isActive && $0.isPRN }, sort: \Medication.name)
     private var prnMeds: [Medication]
