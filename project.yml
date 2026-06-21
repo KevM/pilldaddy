@@ -31,6 +31,7 @@ targets:
           - CFBundleURLSchemes:
               - routine
         NSHealthUpdateUsageDescription: Routine Dose Planner saves the patient's health readings to Apple Health.
+        NSHealthShareUsageDescription: Routine Dose Planner reads health metrics to display and track them over time alongside your medication schedule.
         LSApplicationQueriesSchemes:
           - x-apple-health
 

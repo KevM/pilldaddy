@@ -35,6 +35,8 @@
 	<array>
 		<string>x-apple-health</string>
 	</array>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Routine Dose Planner reads health metrics to display and track them over time alongside your medication schedule.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Routine Dose Planner saves the patient's health readings to Apple Health.</string>
 	<key>NSSupportsLiveActivities</key>
