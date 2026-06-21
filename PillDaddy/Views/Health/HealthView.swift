@@ -10,6 +10,7 @@ struct HealthView: View {
     @State private var showAdd = false
     @State private var showSyncStatus = false
     @State private var pendingDelete: HealthMetric?
+    @State private var confirmedDeleteMetric: HealthMetric?
 
     private let writer: HealthKitWriting = LiveHealthKitWriter()
 
@@ -51,9 +52,14 @@ struct HealthView: View {
         .sheet(isPresented: $showAdd) {
             AddMetricFlow(writer: writer)
         }
-        .sheet(item: $pendingDelete) { metric in
-            DeleteMetricSheet(metric: metric) {
+        .sheet(item: $pendingDelete, onDismiss: {
+            if let metric = confirmedDeleteMetric {
                 HealthMetricService.delete(metric, in: context)
+                confirmedDeleteMetric = nil
+            }
+        }) { metric in
+            DeleteMetricSheet(metric: metric) {
+                confirmedDeleteMetric = metric
             }
         }
         .sheet(isPresented: $showSyncStatus) {
