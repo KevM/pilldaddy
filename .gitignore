@@ -4,3 +4,4 @@
 DerivedData/
 .superpowers/
 build/
+*.log
