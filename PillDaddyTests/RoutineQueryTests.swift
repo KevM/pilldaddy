@@ -4,7 +4,7 @@ import Testing
 @testable import PillDaddy
 
 @MainActor
-struct RegimeQueryTests {
+struct RoutineQueryTests {
 
     private let container: ModelContainer
     private let context: ModelContext
@@ -31,7 +31,7 @@ struct RegimeQueryTests {
             placements: [(routine: blue, quantity: 1.0)], reason: "", in: context)
         try MedicationService.discontinue(discontinued, reason: "stop", in: context)
 
-        let groups = try RegimeQuery.activeBatchGroups(in: context)
+        let groups = try RoutineQuery.activeRoutineGroups(in: context)
         #expect(groups.count == 1)
         #expect(groups.first?.items.count == 1)
         #expect(groups.first?.items.first?.medication?.name == "Active")
@@ -47,7 +47,7 @@ struct RegimeQueryTests {
             isPRN: false, notes: "", placements: [], reason: "", in: context)
         _ = scheduled
 
-        let prn = try RegimeQuery.activePRNMeds(in: context)
+        let prn = try RoutineQuery.activePRNMeds(in: context)
         #expect(prn.map(\.name) == ["Tylenol"])
     }
 
@@ -64,7 +64,7 @@ struct RegimeQueryTests {
         context.insert(midday)
         try context.save()
 
-        let names = try RegimeQuery.activeBatchGroups(in: context).map { $0.routine.name }
+        let names = try RoutineQuery.activeRoutineGroups(in: context).map { $0.routine.name }
         #expect(names == ["Morning", "Midday", "Evening"])
     }
 }

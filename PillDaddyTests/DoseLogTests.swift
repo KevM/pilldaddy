@@ -11,9 +11,9 @@ struct DoseLogTests {
         let context = container.mainContext
 
         let med = Medication(name: "Metoprolol", strengthValue: 30, strengthUnit: "mg", dailyDoseTarget: 1.0)
-        let batch = Routine(name: "Blue", colorHex: "#3B82F6")
-        let item = RoutineItem(quantity: 1.0, medication: med, routine: batch)
-        context.insert(med); context.insert(batch); context.insert(item)
+        let routine = Routine(name: "Blue", colorHex: "#3B82F6")
+        let item = RoutineItem(quantity: 1.0, medication: med, routine: routine)
+        context.insert(med); context.insert(routine); context.insert(item)
 
         let log = DoseLog(
             scheduledDate: .now, status: .taken, quantity: 1.0,

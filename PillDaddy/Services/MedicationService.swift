@@ -10,10 +10,10 @@ enum DoseAllocationError: Error, Equatable {
 }
 
 enum MembershipError: Error, Equatable {
-    case alreadyInBatch
+    case alreadyInRoutine
 }
 
-enum BatchError: Error, Equatable {
+enum RoutineError: Error, Equatable {
     case hasActiveMedications
 }
 
@@ -22,7 +22,7 @@ enum BatchError: Error, Equatable {
 @MainActor
 enum MedicationService {
 
-    /// Creates a medication, its batch memberships (skipped for PRN), and an
+    /// Creates a medication, its routine memberships (skipped for PRN), and an
     /// `added` change event. Reason is optional on add.
     @discardableResult
     static func addMedication(
@@ -55,7 +55,7 @@ enum MedicationService {
         return med
     }
 
-    /// Changes strength and/or per-batch quantities on the same medication and
+    /// Changes strength and/or per-routine quantities on the same medication and
     /// records a `doseChanged` event with an old→new summary. Reason required.
     static func changeDose(
         _ med: Medication,
@@ -91,16 +91,16 @@ enum MedicationService {
         try context.save()
      }
 
-    /// Adds a medication to a batch with a chosen quantity, rejecting anything
+    /// Adds a medication to a routine with a chosen quantity, rejecting anything
     /// that would push total allocation past the daily-dose target. Initial
     /// placement needs no reason.
-    static func addToBatch(
+    static func addToRoutine(
         _ med: Medication, _ routine: Routine, quantity: Double,
         in context: ModelContext
     ) throws {
         let medID = med.persistentModelID
         let duplicate = (routine.items ?? []).contains { $0.medication?.persistentModelID == medID }
-        if duplicate { throw MembershipError.alreadyInBatch }
+        if duplicate { throw MembershipError.alreadyInRoutine }
 
         if DoseAllocation.isOverTarget(allocated: DoseAllocation.allocated(med) + quantity, target: med.dailyDoseTarget) {
             throw DoseAllocationError.exceedsDailyTarget
@@ -113,9 +113,9 @@ enum MedicationService {
         try context.save()
     }
 
-    /// Removes a medication's batch membership and records a `scheduleChanged`
+    /// Removes a medication's routine membership and records a `scheduleChanged`
     /// event documenting what left. No reason required.
-    static func removeFromBatch(_ item: RoutineItem, in context: ModelContext) throws {
+    static func removeFromRoutine(_ item: RoutineItem, in context: ModelContext) throws {
         let med = item.medication
         let old = membershipDescription(item)
         context.delete(item)
@@ -125,14 +125,14 @@ enum MedicationService {
         try context.save()
     }
 
-    /// Relocates a membership to another batch, preserving its quantity, and
+    /// Relocates a membership to another routine, preserving its quantity, and
     /// records a `scheduleChanged` event. Because the quantity is relocated (not
     /// added), total allocation is unchanged, so no cap check is needed. Throws
-    /// if the target batch already contains this medication.
-    static func moveToBatch(_ item: RoutineItem, to routine: Routine, in context: ModelContext) throws {
+    /// if the target routine already contains this medication.
+    static func moveToRoutine(_ item: RoutineItem, to routine: Routine, in context: ModelContext) throws {
         let medID = item.medication?.persistentModelID
         let duplicate = (routine.items ?? []).contains { $0.medication?.persistentModelID == medID }
-        if duplicate { throw MembershipError.alreadyInBatch }
+        if duplicate { throw MembershipError.alreadyInRoutine }
 
         let med = item.medication
         let old = membershipDescription(item)
@@ -144,14 +144,14 @@ enum MedicationService {
         try context.save()
     }
 
-    /// Hard-deletes a batch, allowed only when no active (non-PRN) medication is
+    /// Hard-deletes a routine, allowed only when no active (non-PRN) medication is
     /// a member. Remaining (discontinued-med) join rows cascade away; dose-log
     /// snapshots survive intact.
-    static func deleteBatch(_ routine: Routine, in context: ModelContext) throws {
+    static func deleteRoutine(_ routine: Routine, in context: ModelContext) throws {
         let hasActive = (routine.items ?? []).contains {
             ($0.medication?.isActive ?? false) && !($0.medication?.isPRN ?? false)
         }
-        if hasActive { throw BatchError.hasActiveMedications }
+        if hasActive { throw RoutineError.hasActiveMedications }
         context.delete(routine)
         try context.save()
     }
@@ -174,7 +174,7 @@ enum MedicationService {
     }
 
     /// Atomically swaps one drug for a new one: create the replacement, optionally
-    /// inherit the old drug's batch memberships, link `successor`, discontinue the
+    /// inherit the old drug's routine memberships, link `successor`, discontinue the
     /// old drug, and write a `swapped` event (old) + `added` event (new). Reason required.
     @discardableResult
     static func swap(
@@ -225,7 +225,7 @@ enum MedicationService {
         try context.save()
     }
 
-    /// Restores a discontinued medication to the active regime (its memberships
+    /// Restores a discontinued medication to the active routines (its memberships
     /// reappear automatically) and writes a `reactivated` event. Reason required.
     static func reactivate(_ med: Medication, reason: String, in context: ModelContext) throws {
         try requireReason(reason)
@@ -248,13 +248,13 @@ enum MedicationService {
     /// Human-readable membership description frozen into schedule-change events,
     /// e.g. "Morning · 1 tablet".
     static func membershipDescription(_ item: RoutineItem) -> String {
-        let batch = item.routine?.name ?? "?"
+        let routine = item.routine?.name ?? "?"
         let form = item.medication?.form ?? ""
-        let desc = "\(batch) · \(DoseFormat.qty(item.quantity)) \(form)"
+        let desc = "\(routine) · \(DoseFormat.qty(item.quantity)) \(form)"
         return desc.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    /// Human-readable summary of a med's current dose, deterministic (sorted by batch name).
+    /// Human-readable summary of a med's current dose, deterministic (sorted by routine name).
     static func doseSummary(_ med: Medication) -> String {
         let parts = (med.routineItems ?? [])
             .sorted { ($0.routine?.name ?? "") < ($1.routine?.name ?? "") }

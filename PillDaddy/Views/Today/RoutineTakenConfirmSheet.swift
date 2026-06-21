@@ -3,8 +3,8 @@ import SwiftData
 
 /// "Mark all taken" as a fill, not an overwrite. Un-logged meds → taken; already
 /// taken → preserved; skipped → preserved unless the caregiver flips them here.
-struct BatchTakenConfirmSheet: View {
-    let batchDay: DayQuery.BatchDay
+struct RoutineTakenConfirmSheet: View {
+    let routineDay: DayQuery.RoutineDay
     let day: Date
 
     @Environment(\.modelContext) private var context
@@ -15,15 +15,15 @@ struct BatchTakenConfirmSheet: View {
     /// Skipped meds the caregiver chose to flip to taken (by item id).
     @State private var flipped: Set<PersistentIdentifier> = []
 
-    private var unlogged: [DayQuery.MedDose] { batchDay.meds.filter { $0.log == nil } }
+    private var unlogged: [DayQuery.MedDose] { routineDay.meds.filter { $0.log == nil } }
     private var alreadyTaken: [DayQuery.MedDose] {
-        batchDay.meds.filter { $0.log?.status == DoseStatus.taken.rawValue }
+        routineDay.meds.filter { $0.log?.status == DoseStatus.taken.rawValue }
     }
     private var skipped: [DayQuery.MedDose] {
-        batchDay.meds.filter { $0.log?.status == DoseStatus.skipped.rawValue }
+        routineDay.meds.filter { $0.log?.status == DoseStatus.skipped.rawValue }
     }
     private var missed: [DayQuery.MedDose] {
-        batchDay.meds.filter { $0.log?.status == DoseStatus.missed.rawValue }
+        routineDay.meds.filter { $0.log?.status == DoseStatus.missed.rawValue }
     }
 
     var body: some View {
@@ -83,7 +83,7 @@ struct BatchTakenConfirmSheet: View {
                     TextField("Applies to the doses being taken", text: $note, axis: .vertical)
                 }
             }
-            .navigationTitle(batchDay.routine.name.isEmpty ? "Routine" : batchDay.routine.name)
+            .navigationTitle(routineDay.routine.name.isEmpty ? "Routine" : routineDay.routine.name)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
@@ -112,7 +112,7 @@ struct BatchTakenConfirmSheet: View {
 
     private func confirm() {
         let fill = unlogged.map(\.item) + skipped.filter { flipped.contains($0.id) }.map(\.item) + missed.filter { flipped.contains($0.id) }.map(\.item)
-        DoseLogService.logBatchTaken(batchDay.routine, on: day, items: fill,
+        DoseLogService.logBatchTaken(routineDay.routine, on: day, items: fill,
                                      takenAt: takenAt, note: note, in: context)
         dismiss()
     }
@@ -121,10 +121,10 @@ struct BatchTakenConfirmSheet: View {
 #if DEBUG
 #Preview {
     let container = PreviewSupport.seededContainer()
-    let batches = try! container.mainContext.fetch(
+    let routines = try! container.mainContext.fetch(
         FetchDescriptor<Routine>(sortBy: [SortDescriptor(\.timeOfDay), SortDescriptor(\.uuid)]))
-    let day = DayQuery.batchDays(from: batches, on: .now).first!
-    return BatchTakenConfirmSheet(batchDay: day, day: .now)
+    let day = DayQuery.routineDays(from: routines, on: .now).first!
+    return RoutineTakenConfirmSheet(routineDay: day, day: .now)
         .modelContainer(container)
 }
 #endif

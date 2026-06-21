@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-/// Loads a realistic test regime into an empty store so later sessions can be
+/// Loads a realistic test routines into an empty store so later sessions can be
 /// exercised without manual setup. No-op if any Medication already exists.
 enum SeedData {
     @MainActor
@@ -19,7 +19,7 @@ enum SeedData {
                          timeOfDay: time(9, 0), mealRelation: .withFood)
         let green = Routine(name: "Green", colorHex: "#10B981",
                           timeOfDay: time(19, 0), mealRelation: .afterFood)
-        // An early batch (07:00) that is overdue by mid-morning so the missed/Live
+        // An early routine (07:00) that is overdue by mid-morning so the missed/Live
         // Activity paths are exercisable from seed.
         let dawn = Routine(name: "Dawn", colorHex: "#8B5CF6",
                          timeOfDay: time(7, 0), mealRelation: .beforeFood)
@@ -73,8 +73,8 @@ enum SeedData {
             reasoning: "Cardiologist confirmed dose at June visit — keep as is",
             medication: metoprolol))
 
-        // Today's logging: Blue batch partially logged (Metoprolol taken, Vitamin D
-        // skipped), one PRN dose taken. Green batch left pending.
+        // Today's logging: Blue routine partially logged (Metoprolol taken, Vitamin D
+        // skipped), one PRN dose taken. Green routine left pending.
         let blueSlot = DayQuery.slotDate(for: blue, on: .now)
         context.insert(DoseLog(
             scheduledDate: blueSlot, takenAt: time(9, 5), status: .taken, quantity: 1.0,

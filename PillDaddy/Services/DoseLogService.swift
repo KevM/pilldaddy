@@ -11,9 +11,9 @@ enum DoseLogServiceError: Error, Equatable {
 @MainActor
 enum DoseLogService {
 
-    // MARK: - Scheduled batches
+    // MARK: - Scheduled routines
 
-    /// Marks the given items taken for the batch's slot on `day` (the fill set the
+    /// Marks the given items taken for the routine's slot on `day` (the fill set the
     /// confirm sheet computed). Items not passed are left untouched. Optional note.
     static func logBatchTaken(
         _ routine: Routine, on day: Date, items: [RoutineItem],

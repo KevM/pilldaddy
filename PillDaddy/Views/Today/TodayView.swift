@@ -8,40 +8,40 @@ struct TodayView: View {
     @Environment(ReminderSettings.self) private var settings
 
     @Query(sort: [SortDescriptor(\Routine.timeOfDay), SortDescriptor(\Routine.uuid)])
-    private var batches: [Routine]
+    private var routines: [Routine]
     @Query(filter: #Predicate<Medication> { $0.isActive && $0.isPRN }, sort: \Medication.name)
     private var prnMeds: [Medication]
     @State private var selectedDay = Date.now
     @State private var expandedID: PersistentIdentifier?
     @State private var prnExpanded = false
 
-    @State private var takingBatch: DayQuery.BatchDay?
-    @State private var adjustingBatch: DayQuery.BatchDay?
+    @State private var takingRoutine: DayQuery.RoutineDay?
+    @State private var adjustingRoutine: DayQuery.RoutineDay?
 
-    private var batchDays: [DayQuery.BatchDay] {
-        return DayQuery.batchDays(from: batches, on: selectedDay)
+    private var routineDays: [DayQuery.RoutineDay] {
+        return DayQuery.routineDays(from: routines, on: selectedDay)
     }
     private var prnDoses: [DayQuery.PRNDose] {
         return DayQuery.prnDoses(from: prnMeds, on: selectedDay)
     }
     private var isToday: Bool { Calendar.current.isDate(selectedDay, inSameDayAs: .now) }
-    private var doneCount: Int { batchDays.filter { $0.isCompleted }.count }
+    private var doneCount: Int { routineDays.filter { $0.isCompleted }.count }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 12) {
                     dayStepper
-                    Text("\(doneCount) of \(batchDays.count) batches done")
+                    Text("\(doneCount) of \(routineDays.count) routines done")
                         .font(.caption).foregroundStyle(.secondary)
 
-                    ForEach(batchDays) { day in
-                        BatchLogCard(
-                            batchDay: day,
+                    ForEach(routineDays) { day in
+                        RoutineLogCard(
+                            routineDay: day,
                             isExpanded: expandedID == day.id,
                             onToggle: { toggle(day) },
-                            onMarkAllTaken: { takingBatch = day },
-                            onAdjust: { adjustingBatch = day },
+                            onMarkAllTaken: { takingRoutine = day },
+                            onAdjust: { adjustingRoutine = day },
                             onRevert: { revert(day) })
                     }
 
@@ -53,13 +53,13 @@ struct TodayView: View {
                 .padding()
             }
             .navigationTitle("Today")
-            .sheet(item: $takingBatch) { BatchTakenConfirmSheet(batchDay: $0, day: selectedDay) }
-            .sheet(item: $adjustingBatch) { IndividualAdjustSheet(batchDay: $0, day: selectedDay) }
+            .sheet(item: $takingRoutine) { RoutineTakenConfirmSheet(routineDay: $0, day: selectedDay) }
+            .sheet(item: $adjustingRoutine) { IndividualAdjustSheet(routineDay: $0, day: selectedDay) }
             .onAppear(perform: autoExpand)
             .onAppear { focusFromRouter() }
             .onChange(of: selectedDay) { _, _ in autoExpand() }
             .onChange(of: router.pendingBatchUUID) { _, _ in focusFromRouter() }
-            .onChange(of: batchDays.map { $0.state }) { _, _ in
+            .onChange(of: routineDays.map { $0.state }) { _, _ in
                 autoExpand()
                 ReminderSync.refresh(context: context, settings: settings)
             }
@@ -86,31 +86,31 @@ struct TodayView: View {
         }
     }
 
-    private func toggle(_ day: DayQuery.BatchDay) {
+    private func toggle(_ day: DayQuery.RoutineDay) {
         expandedID = (expandedID == day.id) ? nil : day.id
     }
 
-    private func revert(_ day: DayQuery.BatchDay) {
+    private func revert(_ day: DayQuery.RoutineDay) {
         DoseLogService.revertBatch(day.routine, on: selectedDay, items: day.meds.map(\.item), in: context)
     }
 
-    /// On today, expand the batch whose slot time is closest to now and not yet fully
+    /// On today, expand the routine whose slot time is closest to now and not yet fully
     /// taken; otherwise expand nothing.
     private func autoExpand() {
         guard isToday else { expandedID = nil; return }
         let now = Date.now
-        expandedID = batchDays
+        expandedID = routineDays
             .filter { !$0.isCompleted }
             .min { abs($0.slotDate.timeIntervalSince(now)) < abs($1.slotDate.timeIntervalSince(now)) }?
             .id
     }
 
-    /// Honor a deep link: jump to today and expand the requested batch.
+    /// Honor a deep link: jump to today and expand the requested routine.
     private func focusFromRouter() {
         guard let uuid = router.pendingBatchUUID else { return }
-        if let batch = batches.first(where: { $0.uuid.uuidString == uuid }) {
+        if let routine = routines.first(where: { $0.uuid.uuidString == uuid }) {
             selectedDay = .now
-            expandedID = batch.persistentModelID
+            expandedID = routine.persistentModelID
         }
         router.pendingBatchUUID = nil
     }

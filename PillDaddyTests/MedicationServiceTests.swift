@@ -257,7 +257,7 @@ struct MedicationServiceTests {
             isPRN: false, notes: "", dailyDoseTarget: 2,
             placements: [], reason: "", in: context)
 
-        try MedicationService.addToBatch(med, blue, quantity: 1.5, in: context)
+        try MedicationService.addToRoutine(med, blue, quantity: 1.5, in: context)
 
         #expect(med.routineItems?.count == 1)
         #expect(DoseAllocation.allocated(med) == 1.5)
@@ -273,7 +273,7 @@ struct MedicationServiceTests {
             placements: [], reason: "", in: context)
 
         #expect(throws: DoseAllocationError.exceedsDailyTarget) {
-            try MedicationService.addToBatch(med, blue, quantity: 1.5, in: context)
+            try MedicationService.addToRoutine(med, blue, quantity: 1.5, in: context)
         }
         #expect(med.routineItems?.isEmpty == true)
     }
@@ -341,7 +341,7 @@ struct MedicationServiceTests {
         context.insert(med)
         try context.save()
 
-        try MedicationService.addToBatch(med, blue, quantity: 1.0, in: context)
+        try MedicationService.addToRoutine(med, blue, quantity: 1.0, in: context)
 
         #expect(med.routineItems?.count == 1)
         let event = try #require((med.changeEvents ?? []).first {
@@ -361,7 +361,7 @@ struct MedicationServiceTests {
         try context.save()
 
         #expect(throws: DoseAllocationError.exceedsDailyTarget) {
-            try MedicationService.addToBatch(med, blue, quantity: 2.0, in: context)
+            try MedicationService.addToRoutine(med, blue, quantity: 2.0, in: context)
         }
     }
 
@@ -376,7 +376,7 @@ struct MedicationServiceTests {
         context.insert(item)
         try context.save()
 
-        try MedicationService.removeFromBatch(item, in: context)
+        try MedicationService.removeFromRoutine(item, in: context)
 
         #expect(med.routineItems?.isEmpty == true)
         let event = try #require((med.changeEvents ?? []).first {
@@ -397,7 +397,7 @@ struct MedicationServiceTests {
         context.insert(item)
         try context.save()
 
-        try MedicationService.moveToBatch(item, to: afternoon, in: context)
+        try MedicationService.moveToRoutine(item, to: afternoon, in: context)
 
         #expect(item.routine?.name == "Afternoon")
         #expect(item.quantity == 1.5)
@@ -421,35 +421,35 @@ struct MedicationServiceTests {
         context.insert(inMorning); context.insert(inAfternoon)
         try context.save()
 
-        #expect(throws: MembershipError.alreadyInBatch) {
-            try MedicationService.moveToBatch(inMorning, to: afternoon, in: context)
+        #expect(throws: MembershipError.alreadyInRoutine) {
+            try MedicationService.moveToRoutine(inMorning, to: afternoon, in: context)
         }
     }
 
     @Test
     func testDeleteBatchThrowsWhenActiveMedicationPresent() throws {
-        let batch = Routine(name: "Morning")
-        context.insert(batch)
+        let routine = Routine(name: "Morning")
+        context.insert(routine)
         let med = Medication(name: "Metoprolol", strengthValue: 30, strengthUnit: "mg",
                              dailyDoseTarget: 1.0, form: "tablet", isActive: true)
         context.insert(med)
-        context.insert(RoutineItem(quantity: 1.0, medication: med, routine: batch))
+        context.insert(RoutineItem(quantity: 1.0, medication: med, routine: routine))
         try context.save()
 
-        #expect(throws: BatchError.hasActiveMedications) {
-            try MedicationService.deleteBatch(batch, in: context)
+        #expect(throws: RoutineError.hasActiveMedications) {
+            try MedicationService.deleteRoutine(routine, in: context)
         }
         #expect(try context.fetch(FetchDescriptor<Routine>()).count == 1)
     }
 
     @Test
     func testDeleteBatchSucceedsWhenNoActiveMedsAndPreservesDoseLogSnapshots() throws {
-        let batch = Routine(name: "Morning", colorHex: "#3B82F6")
-        context.insert(batch)
+        let routine = Routine(name: "Morning", colorHex: "#3B82F6")
+        context.insert(routine)
         let med = Medication(name: "Metoprolol", strengthValue: 30, strengthUnit: "mg",
                              dailyDoseTarget: 1.0, form: "tablet", isActive: false)
         context.insert(med)
-        let item = RoutineItem(quantity: 1.0, medication: med, routine: batch)
+        let item = RoutineItem(quantity: 1.0, medication: med, routine: routine)
         context.insert(item)
         let log = DoseLog(scheduledDate: .now, takenAt: .now, status: .taken, quantity: 1.0,
                           snapshotMedName: "Metoprolol", snapshotStrength: "30 mg",
@@ -458,7 +458,7 @@ struct MedicationServiceTests {
         context.insert(log)
         try context.save()
 
-        try MedicationService.deleteBatch(batch, in: context)
+        try MedicationService.deleteRoutine(routine, in: context)
 
         #expect(try context.fetch(FetchDescriptor<Routine>()).isEmpty)
         #expect(try context.fetch(FetchDescriptor<RoutineItem>()).isEmpty)   // cascade removed the join row
@@ -477,10 +477,10 @@ struct MedicationServiceTests {
         context.insert(med)
         try context.save()
 
-        try MedicationService.addToBatch(med, blue, quantity: 1.0, in: context)
+        try MedicationService.addToRoutine(med, blue, quantity: 1.0, in: context)
 
-        #expect(throws: MembershipError.alreadyInBatch) {
-            try MedicationService.addToBatch(med, blue, quantity: 1.0, in: context)
+        #expect(throws: MembershipError.alreadyInRoutine) {
+            try MedicationService.addToRoutine(med, blue, quantity: 1.0, in: context)
         }
     }
 }

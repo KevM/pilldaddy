@@ -37,7 +37,7 @@ struct PillReminderLiveActivity: Widget {
             } minimal: {
                 Circle().fill(accent(context.state.tier)).frame(width: 12, height: 12)
             }
-            .widgetURL(URL(string: "pilldaddy://batch/\(context.attributes.batchID)"))
+            .widgetURL(URL(string: "pilldaddy://routine/\(context.attributes.batchID)"))
         }
     }
 
@@ -67,7 +67,7 @@ struct PillReminderLiveActivity: Widget {
                 .tint(accent(tier))
         }
         .padding(14)
-        .widgetURL(URL(string: "pilldaddy://batch/\(context.attributes.batchID)"))
+        .widgetURL(URL(string: "pilldaddy://routine/\(context.attributes.batchID)"))
     }
 
     private func accent(_ tier: ReminderTier) -> Color {

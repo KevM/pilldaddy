@@ -12,7 +12,7 @@ struct MedicationDetailView: View {
     @State private var errorMessage: String?
 
     enum DetailSheet: Identifiable {
-        case edit, dose, instructions, swap, lifecycle, addToBatch
+        case edit, dose, instructions, swap, lifecycle, addToRoutine
         var id: Int { hashValue }
     }
 
@@ -37,10 +37,10 @@ struct MedicationDetailView: View {
                 Section("Schedule") {
                     ForEach(medication.routineItems ?? []) { item in
                         Menu {
-                            Button("Move to another batch…") { movingItem = item }
-                            Button("Remove from batch", role: .destructive) {
+                            Button("Move to another routine…") { movingItem = item }
+                            Button("Remove from routine", role: .destructive) {
                                 do {
-                                    try MedicationService.removeFromBatch(item, in: context)
+                                    try MedicationService.removeFromRoutine(item, in: context)
                                 } catch {
                                     errorMessage = error.localizedDescription
                                 }
@@ -57,7 +57,7 @@ struct MedicationDetailView: View {
                         }
                         .buttonStyle(.plain)
                     }
-                    Button("Add to batch…") { sheet = .addToBatch }
+                    Button("Add to routine…") { sheet = .addToRoutine }
                         .disabled(DoseAllocation.remaining(medication) <= 0)
                 }
             }
@@ -100,11 +100,11 @@ struct MedicationDetailView: View {
             case .instructions: ChangeInstructionsSheet(medication: medication)
             case .swap: SwapSheet(oldMed: medication)
             case .lifecycle: LifecycleReasonSheet(medication: medication, reactivating: !medication.isActive)
-            case .addToBatch: AddToBatchSheet(medication: medication)
+            case .addToRoutine: AddToRoutineSheet(medication: medication)
             }
         }
         .sheet(item: $movingItem) { item in
-            MoveBatchSheet(item: item)
+            MoveRoutineSheet(item: item)
         }
         .alert("Error", isPresented: Binding(
             get: { errorMessage != nil },

@@ -4,7 +4,7 @@ import Testing
 @testable import PillDaddy
 
 @MainActor
-struct BatchRelationshipTests {
+struct RoutineRelationshipTests {
     @Test
     func testMedicationInTwoBatchesAtDifferentQuantities() throws {
         let container = try ModelTestSupport.makeContainer()
@@ -40,12 +40,12 @@ struct BatchRelationshipTests {
     func testDefaultsForBatch() throws {
         let container = try ModelTestSupport.makeContainer()
         let context = container.mainContext
-        let batch = Routine()
-        context.insert(batch)
+        let routine = Routine()
+        context.insert(routine)
         try context.save()
-        #expect(batch.mealRelation == MealRelation.none.rawValue)
-        #expect(batch.recurrenceKind == RecurrenceKind.daily.rawValue)
-        #expect(batch.items ?? [] == [])
+        #expect(routine.mealRelation == MealRelation.none.rawValue)
+        #expect(routine.recurrenceKind == RecurrenceKind.daily.rawValue)
+        #expect(routine.items ?? [] == [])
     }
 
     @Test
@@ -59,6 +59,30 @@ struct BatchRelationshipTests {
         #expect(a.uuid != b.uuid)
         let savedID = a.uuid
         #expect(a.uuid == savedID)   // stable across access
+    }
+
+    @Test
+    func deletingRoutineKeepsDoseLogs() throws {
+        let container = try ModelContainer(
+            for: PillDaddySchema.schema,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+        let ctx = container.mainContext
+        let med = Medication(name: "Test", isActive: false)
+        let routine = Routine(name: "Morning")
+        let item = RoutineItem(medication: med, routine: routine)
+        let log = DoseLog(status: .taken, medication: med, routineItem: item)
+        ctx.insert(med)
+        ctx.insert(routine)
+        ctx.insert(item)
+        ctx.insert(log)
+        try ctx.save()
+
+        try MedicationService.deleteRoutine(routine, in: ctx)
+        try ctx.save()
+
+        let logs = try ctx.fetch(FetchDescriptor<DoseLog>())
+        #expect(logs.count == 1)
+        #expect(logs.first?.routineItem == nil)
     }
 }
 

@@ -20,7 +20,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         [.banner, .sound]
     }
 
-    // Tap → focus the batch on the Today tab.
+    // Tap → focus the routine on the Today tab.
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 didReceive response: UNNotificationResponse) async {
         if let uuid = response.notification.request.content.userInfo["batchUUID"] as? String {
@@ -66,7 +66,7 @@ struct PillDaddyApp: App {
                 .environment(appDelegate.router)
                 .environment(settings)
                 .onOpenURL { url in
-                    if url.scheme == "pilldaddy", url.host == "batch" {
+                    if url.scheme == "pilldaddy", url.host == "routine" {
                         appDelegate.router.pendingBatchUUID = url.lastPathComponent
                     }
                 }
@@ -86,9 +86,9 @@ struct PillDaddyApp: App {
     @MainActor
     private func syncReminders() {
         let context = container.mainContext
-        let batches = (try? context.fetch(FetchDescriptor<Routine>())) ?? []
+        let routines = (try? context.fetch(FetchDescriptor<Routine>())) ?? []
         MissedReconciler.reconcile(
-            batches: batches, now: .now, graceMinutes: settings.graceMinutes, in: context)
+            routines: routines, now: .now, graceMinutes: settings.graceMinutes, in: context)
         ReminderSync.refresh(context: context, settings: settings)
     }
 }

@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-/// Add a new medication (with inline batch assignment + optional reason) or edit
+/// Add a new medication (with inline routine assignment + optional reason) or edit
 /// an existing one's non-clinical details. Strength/dose changes go through the
 /// guided Change-dose flow, not here.
 struct MedicationEditor: View {
@@ -15,7 +15,7 @@ struct MedicationEditor: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @Query(sort: [SortDescriptor(\Routine.timeOfDay), SortDescriptor(\Routine.uuid)])
-    private var batches: [Routine]
+    private var routines: [Routine]
 
     @State private var name = ""
     @State private var strengthValue = 0.0
@@ -61,16 +61,16 @@ struct MedicationEditor: View {
 
                 if isAdd && !isPRN {
                     Section {
-                        if batches.isEmpty {
-                            Text("No batches yet — add one from the Meds tab.")
+                        if routines.isEmpty {
+                            Text("No routines yet — add one from the Meds tab.")
                                 .foregroundStyle(.secondary)
                         }
-                        ForEach(batches) { batch in
-                            batchAssignRow(batch)
+                        ForEach(routines) { routine in
+                            batchAssignRow(routine)
                         }
                     } header: {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Add to batches")
+                            Text("Add to routines")
                             let isOver = DoseAllocation.isOverTarget(allocated: assignedTotal, target: dailyDoseTarget)
                             Text("\(DoseFormat.qty(assignedTotal)) of \(DoseFormat.qty(dailyDoseTarget))/day allocated (\(DoseFormat.qty(assignedTotal * strengthValue)) of \(DoseFormat.qty(dailyDoseTarget * strengthValue)) \(strengthUnit))")
                                 .font(.caption)
@@ -150,7 +150,7 @@ struct MedicationEditor: View {
         switch mode {
         case .add:
             let placements: [(routine: Routine, quantity: Double)] = isPRN ? [] :
-                batches
+                routines
                     .filter { selected.contains($0.persistentModelID) }
                     .map { ($0, quantities[$0.persistentModelID] ?? 1.0) }
             do {
@@ -171,7 +171,7 @@ struct MedicationEditor: View {
                 for item in med.routineItems ?? [] { context.delete(item) }
                 context.insert(MedicationChangeEvent(
                     type: .doseChanged,
-                    reasoning: "Converted medication to PRN (cleared scheduled batches)",
+                    reasoning: "Converted medication to PRN (cleared scheduled routines)",
                     medication: med
                 ))
             }
@@ -189,7 +189,7 @@ struct MedicationEditor: View {
         if let doseError = error as? DoseAllocationError {
             switch doseError {
             case .exceedsDailyTarget:
-                return "Total allocation across batches cannot exceed the daily dose target."
+                return "Total allocation across routines cannot exceed the daily dose target."
             }
         }
         return error.localizedDescription

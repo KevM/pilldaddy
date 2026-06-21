@@ -18,9 +18,9 @@ struct DoseAllocationTests {
                              dailyDoseTarget: target)
         context.insert(med)
         for q in quantities {
-            let batch = Routine(name: "B")
-            context.insert(batch)
-            context.insert(RoutineItem(quantity: q, medication: med, routine: batch))
+            let routine = Routine(name: "B")
+            context.insert(routine)
+            context.insert(RoutineItem(quantity: q, medication: med, routine: routine))
         }
         return med
     }

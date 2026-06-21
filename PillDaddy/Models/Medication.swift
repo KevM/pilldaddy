@@ -10,7 +10,7 @@ final class Medication {
     var form: String = "tablet"
     var generalNotes: String = ""
     var isActive: Bool = true
-    var isPRN: Bool = false                // as-needed; no batch memberships
+    var isPRN: Bool = false                // as-needed; no routine memberships
     var createdAt: Date = Date.now
     var discontinuedAt: Date? = nil
     var uuid: UUID = UUID()

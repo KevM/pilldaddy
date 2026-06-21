@@ -19,8 +19,8 @@ struct LifecycleReasonSheet: View {
             Form {
                 Section {
                     Text(reactivating
-                         ? "Reactivating restores this medication to the active regime."
-                         : "Discontinuing removes this medication from the active regime. Its full history is kept.")
+                         ? "Reactivating restores this medication to the active routines."
+                         : "Discontinuing removes this medication from the active routines. Its full history is kept.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }

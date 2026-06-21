@@ -1,13 +1,13 @@
 import Foundation
 
 /// Single source of truth for daily-dose allocation: how many units/day are
-/// allocated to batches vs. the prescribed target, plus derived strength totals.
+/// allocated to routines vs. the prescribed target, plus derived strength totals.
 /// All counts are in units (tablets); strength totals are derived (value x count)
 /// and only ever within one medication, so no cross-unit conversion is needed.
 enum DoseAllocation {
     enum Status { case under, full, over }
 
-    /// Sum of quantity across all the med's batch items, regardless of recurrence.
+    /// Sum of quantity across all the med's routine items, regardless of recurrence.
     static func allocated(_ med: Medication) -> Double {
         (med.routineItems ?? []).reduce(0) { $0 + $1.quantity }
     }

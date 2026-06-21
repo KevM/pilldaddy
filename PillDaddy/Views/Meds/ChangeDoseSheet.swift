@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-/// Guided dose change: edit strength and per-batch quantities; reason required.
+/// Guided dose change: edit strength and per-routine quantities; reason required.
 struct ChangeDoseSheet: View {
     @Bindable var medication: Medication
     @Environment(\.modelContext) private var context
@@ -100,7 +100,7 @@ struct ChangeDoseSheet: View {
         if let doseError = error as? DoseAllocationError {
             switch doseError {
             case .exceedsDailyTarget:
-                return "Total allocation across batches cannot exceed the daily dose target."
+                return "Total allocation across routines cannot exceed the daily dose target."
             }
         } else if let serviceError = error as? MedicationServiceError {
             switch serviceError {

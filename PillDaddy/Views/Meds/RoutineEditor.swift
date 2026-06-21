@@ -3,7 +3,7 @@ import SwiftData
 
 /// Create or edit a routine: name, color, time, meal relation, recurrence, and the
 /// pills it contains. (The README's "color manager".)
-struct BatchEditor: View {
+struct RoutineEditor: View {
     /// nil = creating a new routine.
     let routine: Routine?
 
@@ -66,7 +66,7 @@ struct BatchEditor: View {
                         .onDelete { offsets in
                             for index in offsets {
                                 do {
-                                    try MedicationService.removeFromBatch(activeItems[index], in: context)
+                                    try MedicationService.removeFromRoutine(activeItems[index], in: context)
                                 } catch {
                                     errorMessage = error.localizedDescription
                                 }
@@ -121,7 +121,7 @@ struct BatchEditor: View {
                             Button("Add") {
                                 do {
                                     if let routine {
-                                        try MedicationService.addToBatch(med, routine, quantity: addQuantity, in: context)
+                                        try MedicationService.addToRoutine(med, routine, quantity: addQuantity, in: context)
                                     }
                                     addingMed = nil
                                 } catch {
@@ -160,7 +160,7 @@ struct BatchEditor: View {
                 Button("Delete", role: .destructive) {
                     if let routine {
                         do {
-                            try MedicationService.deleteBatch(routine, in: context)
+                            try MedicationService.deleteRoutine(routine, in: context)
                             dismiss()
                         } catch {
                             errorMessage = error.localizedDescription
@@ -253,7 +253,7 @@ struct BatchEditor: View {
         if let doseError = error as? DoseAllocationError {
             switch doseError {
             case .exceedsDailyTarget:
-                return "Total allocation across batches cannot exceed the daily dose target."
+                return "Total allocation across routines cannot exceed the daily dose target."
             }
         }
         return error.localizedDescription
@@ -262,7 +262,7 @@ struct BatchEditor: View {
 
 #if DEBUG
 #Preview {
-    BatchEditor(routine: nil)
+    RoutineEditor(routine: nil)
         .modelContainer(PreviewSupport.seededContainer())
 }
 #endif

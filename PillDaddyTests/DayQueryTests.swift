@@ -53,8 +53,8 @@ struct DayQueryTests {
             placements: [(routine: blue, quantity: 1.0)], reason: "", in: context)
         try MedicationService.discontinue(stopped, reason: "x", in: context)
 
-        let days = DayQuery.batchDays(from: try fetchBatches(), on: .now)
-        #expect(days.count == 1)                       // Empty batch dropped
+        let days = DayQuery.routineDays(from: try fetchBatches(), on: .now)
+        #expect(days.count == 1)                       // Empty routine dropped
         #expect(days.first?.routine.name == "Blue")
         #expect(days.first?.meds.map { $0.item.medication?.name } == ["Active"])
         #expect(days.first?.state == .pending)         // nothing logged yet
@@ -77,7 +77,7 @@ struct DayQueryTests {
         context.insert(log)
         try context.save()
 
-        let day = try #require(DayQuery.batchDays(from: try fetchBatches(), on: .now).first)
+        let day = try #require(DayQuery.routineDays(from: try fetchBatches(), on: .now).first)
         #expect(day.state == .partial)
         let aDose = try #require(day.meds.first { $0.item.medication?.name == "A" })
         #expect(aDose.log != nil)
@@ -169,7 +169,7 @@ struct DayQueryTests {
         let itemB = try #require((blue.items ?? []).first { $0.medication?.name == "B" })
 
         // 1. Pending (no logs)
-        var days = DayQuery.batchDays(from: try fetchBatches(), on: .now)
+        var days = DayQuery.routineDays(from: try fetchBatches(), on: .now)
         var day = try #require(days.first)
         #expect(day.state == .pending)
         #expect(!day.isCompleted)
@@ -178,7 +178,7 @@ struct DayQueryTests {
         let logA = DoseLog(scheduledDate: .now, status: .taken, medication: itemA.medication, routineItem: itemA)
         context.insert(logA)
         try context.save()
-        days = DayQuery.batchDays(from: try fetchBatches(), on: .now)
+        days = DayQuery.routineDays(from: try fetchBatches(), on: .now)
         day = try #require(days.first)
         #expect(day.state == .partial)
         #expect(!day.isCompleted)
@@ -187,7 +187,7 @@ struct DayQueryTests {
         let logB = DoseLog(scheduledDate: .now, status: .taken, medication: itemB.medication, routineItem: itemB)
         context.insert(logB)
         try context.save()
-        days = DayQuery.batchDays(from: try fetchBatches(), on: .now)
+        days = DayQuery.routineDays(from: try fetchBatches(), on: .now)
         day = try #require(days.first)
         #expect(day.state == .taken)
         #expect(day.isCompleted)
@@ -196,7 +196,7 @@ struct DayQueryTests {
         logA.status = DoseStatus.skipped.rawValue
         logB.status = DoseStatus.skipped.rawValue
         try context.save()
-        days = DayQuery.batchDays(from: try fetchBatches(), on: .now)
+        days = DayQuery.routineDays(from: try fetchBatches(), on: .now)
         day = try #require(days.first)
         #expect(day.state == .skipped)
         #expect(day.isCompleted)
@@ -205,7 +205,7 @@ struct DayQueryTests {
         logA.status = DoseStatus.missed.rawValue
         logB.status = DoseStatus.missed.rawValue
         try context.save()
-        days = DayQuery.batchDays(from: try fetchBatches(), on: .now)
+        days = DayQuery.routineDays(from: try fetchBatches(), on: .now)
         day = try #require(days.first)
         #expect(day.state == .missed)
         #expect(day.isCompleted)
@@ -214,7 +214,7 @@ struct DayQueryTests {
         logA.status = DoseStatus.taken.rawValue
         logB.status = DoseStatus.skipped.rawValue
         try context.save()
-        days = DayQuery.batchDays(from: try fetchBatches(), on: .now)
+        days = DayQuery.routineDays(from: try fetchBatches(), on: .now)
         day = try #require(days.first)
         #expect(day.state == .completed)
         #expect(day.isCompleted)

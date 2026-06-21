@@ -18,11 +18,11 @@ struct SettingsView: View {
         @Bindable var settings = settings
         NavigationStack {
             Form {
-                Section(footer: Text("Schedules notifications and a Live Activity for each batch.")) {
+                Section(footer: Text("Schedules notifications and a Live Activity for each routine.")) {
                     Toggle("Reminders", isOn: $settings.remindersEnabled)
                 }
 
-                Section(header: Text("Timing"), footer: Text("How long after a batch's time before a dose is marked missed. "
+                Section(header: Text("Timing"), footer: Text("How long after a routine's time before a dose is marked missed. "
                          + "Also how long reminders keep pestering.")) {
                     Toggle("15-minute heads-up", isOn: $settings.headsUpEnabled)
                     Picker("Grace window", selection: $settings.graceMinutes) {

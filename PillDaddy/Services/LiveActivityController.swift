@@ -2,14 +2,14 @@ import Foundation
 import SwiftData
 import ActivityKit
 
-/// Manages a single Live Activity for the most urgent due/overdue batch today.
+/// Manages a single Live Activity for the most urgent due/overdue routine today.
 /// Local-only: starts/updates only while the app is foregrounded (no push).
 @MainActor
 enum LiveActivityController {
 
-    /// Reconciles the running activity with the current state. Ends it when no batch
-    /// is in its pester window, or starts/updates it for the focus batch.
-    static func refresh(batches: [Routine], now: Date, graceMinutes: Int, enabled: Bool) {
+    /// Reconciles the running activity with the current state. Ends it when no routine
+    /// is in its pester window, or starts/updates it for the focus routine.
+    static func refresh(routines: [Routine], now: Date, graceMinutes: Int, enabled: Bool) {
         let running = Activity<PillReminderAttributes>.activities
 
         guard enabled, ActivityAuthorizationInfo().areActivitiesEnabled else {
@@ -18,7 +18,7 @@ enum LiveActivityController {
         }
 
         let grace = TimeInterval(graceMinutes) * 60
-        guard let focus = focusBatch(batches: batches, now: now, grace: grace) else {
+        guard let focus = focusBatch(routines: routines, now: now, grace: grace) else {
             endAll(running)
             return
         }
@@ -45,10 +45,10 @@ enum LiveActivityController {
         }
     }
 
-    /// Earliest batch today whose slot is in the pester window [slot, slot+grace)
+    /// Earliest routine today whose slot is in the pester window [slot, slot+grace)
     /// and is not fully logged.
-    private static func focusBatch(batches: [Routine], now: Date, grace: TimeInterval) -> Routine? {
-        DayQuery.batchDays(from: batches, on: now)
+    private static func focusBatch(routines: [Routine], now: Date, grace: TimeInterval) -> Routine? {
+        DayQuery.routineDays(from: routines, on: now)
             .filter { !$0.isCompleted }
             .filter { now >= $0.slotDate && now < $0.slotDate.addingTimeInterval(grace) }
             .min { $0.slotDate < $1.slotDate }?

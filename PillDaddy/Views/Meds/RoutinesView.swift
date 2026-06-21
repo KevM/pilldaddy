@@ -1,20 +1,20 @@
 import SwiftUI
 import SwiftData
 
-/// Active regime grouped under color batches, with a trailing PRN section.
-struct RegimeView: View {
+/// Active routines grouped under color routines, with a trailing PRN section.
+struct RoutinesView: View {
     @Query(sort: [SortDescriptor(\Routine.timeOfDay), SortDescriptor(\Routine.uuid)])
-    private var batches: [Routine]
+    private var routines: [Routine]
     @Query(filter: #Predicate<Medication> { $0.isActive && $0.isPRN }, sort: \Medication.name)
     private var prnMeds: [Medication]
 
-    @State private var editingBatch: Routine?
+    @State private var editingRoutine: Routine?
 
     var body: some View {
         List {
-            ForEach(batches) { batch in
+            ForEach(routines) { routine in
                 Section {
-                    let items = activeItems(batch)
+                    let items = activeItems(routine)
                     if items.isEmpty {
                         Text("No active medications")
                             .font(.subheadline).foregroundStyle(.secondary)
@@ -30,7 +30,7 @@ struct RegimeView: View {
                         }
                     }
                 } header: {
-                    header(batch)
+                    header(routine)
                 }
             }
 
@@ -49,7 +49,7 @@ struct RegimeView: View {
                 }
             }
         }
-        .sheet(item: $editingBatch) { BatchEditor(routine: $0) }
+        .sheet(item: $editingRoutine) { RoutineEditor(routine: $0) }
     }
 
     private func header(_ routine: Routine) -> some View {
@@ -58,7 +58,7 @@ struct RegimeView: View {
             Text(routine.name.isEmpty ? "Routine" : routine.name)
             Text(routine.timeOfDay, style: .time)
             Spacer()
-            Button("Edit") { editingBatch = routine }.font(.caption)
+            Button("Edit") { editingRoutine = routine }.font(.caption)
         }
     }
 
@@ -85,7 +85,7 @@ struct RegimeView: View {
 
 #if DEBUG
 #Preview {
-    NavigationStack { RegimeView() }
+    NavigationStack { RoutinesView() }
         .modelContainer(PreviewSupport.seededContainer())
 }
 #endif

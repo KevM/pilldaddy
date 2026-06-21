@@ -1,9 +1,9 @@
 import SwiftUI
 import SwiftData
 
-/// Adds the medication to a batch it is not already in, with an allocation-capped
-/// quantity. Routes through `MedicationService.addToBatch`.
-struct AddToBatchSheet: View {
+/// Adds the medication to a routine it is not already in, with an allocation-capped
+/// quantity. Routes through `MedicationService.addToRoutine`.
+struct AddToRoutineSheet: View {
     let medication: Medication
 
     @Environment(\.modelContext) private var context
@@ -24,13 +24,13 @@ struct AddToBatchSheet: View {
         NavigationStack {
             Form {
                 if available.isEmpty {
-                    Text("This medication is already in every batch.")
+                    Text("This medication is already in every routine.")
                         .foregroundStyle(.secondary)
                 } else {
                     Picker("Routine", selection: $selectedBatch) {
                         Text("Select…").tag(Routine?.none)
-                        ForEach(available) { batch in
-                            Text(batch.name.isEmpty ? "Routine" : batch.name).tag(Routine?.some(batch))
+                        ForEach(available) { routine in
+                            Text(routine.name.isEmpty ? "Routine" : routine.name).tag(Routine?.some(routine))
                         }
                     }
                     DoseQuantityField(
@@ -41,7 +41,7 @@ struct AddToBatchSheet: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
-            .navigationTitle("Add to batch")
+            .navigationTitle("Add to routine")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
@@ -68,21 +68,21 @@ struct AddToBatchSheet: View {
     }
 
     private func add() {
-        guard let batch = selectedBatch else { return }
+        guard let routine = selectedBatch else { return }
         do {
-            try MedicationService.addToBatch(medication, batch, quantity: quantity, in: context)
+            try MedicationService.addToRoutine(medication, routine, quantity: quantity, in: context)
             dismiss()
         } catch DoseAllocationError.exceedsDailyTarget {
-            errorMessage = "Total allocation across batches cannot exceed the daily dose target."
+            errorMessage = "Total allocation across routines cannot exceed the daily dose target."
         } catch {
             errorMessage = error.localizedDescription
         }
     }
 }
 
-/// Moves an existing membership to another batch (quantity carried over), routing
-/// through `MedicationService.moveToBatch`.
-struct MoveBatchSheet: View {
+/// Moves an existing membership to another routine (quantity carried over), routing
+/// through `MedicationService.moveToRoutine`.
+struct MoveRoutineSheet: View {
     let item: RoutineItem
 
     @Environment(\.modelContext) private var context
@@ -101,22 +101,22 @@ struct MoveBatchSheet: View {
         NavigationStack {
             List {
                 if available.isEmpty {
-                    Text("No other batches to move to.").foregroundStyle(.secondary)
+                    Text("No other routines to move to.").foregroundStyle(.secondary)
                 } else {
-                    ForEach(available) { batch in
+                    ForEach(available) { routine in
                         Button {
-                            move(to: batch)
+                            move(to: routine)
                         } label: {
                             HStack {
-                                Circle().fill(Color(hex: batch.colorHex)).frame(width: 10, height: 10)
-                                Text(batch.name.isEmpty ? "Routine" : batch.name)
+                                Circle().fill(Color(hex: routine.colorHex)).frame(width: 10, height: 10)
+                                Text(routine.name.isEmpty ? "Routine" : routine.name)
                             }
                         }
                         .buttonStyle(.plain)
                     }
                 }
             }
-            .navigationTitle("Move to batch")
+            .navigationTitle("Move to routine")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
@@ -134,10 +134,10 @@ struct MoveBatchSheet: View {
 
     private func move(to routine: Routine) {
         do {
-            try MedicationService.moveToBatch(item, to: routine, in: context)
+            try MedicationService.moveToRoutine(item, to: routine, in: context)
             dismiss()
-        } catch MembershipError.alreadyInBatch {
-            errorMessage = "This medication is already in that batch."
+        } catch MembershipError.alreadyInRoutine {
+            errorMessage = "This medication is already in that routine."
         } catch {
             errorMessage = error.localizedDescription
         }

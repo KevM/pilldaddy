@@ -13,7 +13,7 @@ struct SeedDataTests {
         SeedData.seedIfEmpty(context)
         try context.save()
 
-        // Metoprolol exists in two batches at 1.0 and 0.5
+        // Metoprolol exists in two routines at 1.0 and 0.5
         let metoprolol = try #require(
             try context.fetch(FetchDescriptor<Medication>(
                 predicate: #Predicate { $0.name == "Metoprolol" })).first)

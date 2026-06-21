@@ -4,12 +4,12 @@ import SwiftData
 /// Host for the Meds tab: Regime ⇄ All Meds toggle and an add menu.
 struct MedsView: View {
     enum Mode: String, CaseIterable, Identifiable {
-        case regime = "Regime"
+        case routines = "Regime"
         case allMeds = "All Meds"
         var id: String { rawValue }
     }
 
-    @State private var mode: Mode = .regime
+    @State private var mode: Mode = .routines
     @State private var showingAddMed = false
     @State private var showingAddBatch = false
 
@@ -22,11 +22,11 @@ struct MedsView: View {
                 .pickerStyle(.segmented)
                 .padding()
                 ZStack {
-                    RegimeView()
-                        .opacity(mode == .regime ? 1.0 : 0.0)
-                        .disabled(mode != .regime)
-                        .allowsHitTesting(mode == .regime)
-                        .accessibilityHidden(mode != .regime)
+                    RoutinesView()
+                        .opacity(mode == .routines ? 1.0 : 0.0)
+                        .disabled(mode != .routines)
+                        .allowsHitTesting(mode == .routines)
+                        .accessibilityHidden(mode != .routines)
                     AllMedsView()
                         .opacity(mode == .allMeds ? 1.0 : 0.0)
                         .disabled(mode != .allMeds)
@@ -39,14 +39,14 @@ struct MedsView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Button("Add medication") { showingAddMed = true }
-                        Button("Add batch") { showingAddBatch = true }
+                        Button("Add routine") { showingAddBatch = true }
                     } label: {
                         Image(systemName: "plus")
                     }
                 }
             }
             .sheet(isPresented: $showingAddMed) { MedicationEditor(mode: .add) }
-            .sheet(isPresented: $showingAddBatch) { BatchEditor(routine: nil) }
+            .sheet(isPresented: $showingAddBatch) { RoutineEditor(routine: nil) }
         }
     }
 }

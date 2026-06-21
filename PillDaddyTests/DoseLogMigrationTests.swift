@@ -27,9 +27,9 @@ struct DoseLogMigrationTests {
         context.insert(legacy)
 
         // Scheduled log with a live routineItem must stay non-PRN.
-        let batch = Routine(name: "Morning")
-        context.insert(batch)
-        let item = RoutineItem(quantity: 1.0, medication: med, routine: batch)
+        let routine = Routine(name: "Morning")
+        context.insert(routine)
+        let item = RoutineItem(quantity: 1.0, medication: med, routine: routine)
         context.insert(item)
         let scheduled = DoseLog(scheduledDate: .now, status: .taken, medication: med, routineItem: item)
         scheduled.isPRN = false
@@ -53,9 +53,9 @@ struct DoseLogMigrationTests {
 
         let med = Medication(name: "Metoprolol", strengthValue: 30, strengthUnit: "mg", isPRN: false)
         context.insert(med)
-        let batch = Routine(name: "Morning")
-        context.insert(batch)
-        let item = RoutineItem(quantity: 1.0, medication: med, routine: batch)
+        let routine = Routine(name: "Morning")
+        context.insert(routine)
+        let item = RoutineItem(quantity: 1.0, medication: med, routine: routine)
         context.insert(item)
 
         // Scheduled log
@@ -69,9 +69,9 @@ struct DoseLogMigrationTests {
         #expect(log.isPRN == false)
         #expect(UserDefaults.standard.bool(forKey: userDefaultsKey) == true)
 
-        // 2. Now discontinue/make medication inactive so we can delete the batch, nullifying the routineItem link on the log.
+        // 2. Now discontinue/make medication inactive so we can delete the routine, nullifying the routineItem link on the log.
         med.isActive = false
-        try MedicationService.deleteBatch(batch, in: context)
+        try MedicationService.deleteRoutine(routine, in: context)
         #expect(log.routineItem == nil)
         #expect(log.isPRN == false)
 
