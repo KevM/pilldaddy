@@ -65,5 +65,5 @@ jobs:
               print("iPhone 17 Pro")
           ')
           echo "Selected Device: $DEVICE_NAME"
-          xcodebuild -scheme PillDaddy -destination "platform=iOS Simulator,name=$DEVICE_NAME" test -quiet
+          xcodebuild -scheme RoutineDosePlanner -destination "platform=iOS Simulator,name=$DEVICE_NAME" test -quiet
 

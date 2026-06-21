@@ -1,4 +1,4 @@
-name: PillDaddy
+name: RoutineDosePlanner
 options:
   bundleIdPrefix: rodeo.fm
 settings:
@@ -8,15 +8,16 @@ settings:
     STRING_CATALOG_GENERATE_SYMBOLS: YES
     ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
 targets:
-  PillDaddy:
+  RoutineDosePlanner:
     type: application
     platform: iOS
     deploymentTarget: "26.0"
     sources:
-      - PillDaddy
+      - RoutineDosePlanner
     info:
-      path: PillDaddy/Info.plist
+      path: RoutineDosePlanner/Info.plist
       properties:
+        CFBundleDisplayName: Routine Dose Planner
         UILaunchScreen:
           StoryboardName: ""
         UISupportedInterfaceOrientations:
@@ -28,54 +29,54 @@ targets:
         NSSupportsLiveActivities: true
         CFBundleURLTypes:
           - CFBundleURLSchemes:
-              - pilldaddy
-        NSHealthUpdateUsageDescription: PillDaddy saves the patient's health readings to Apple Health.
+              - routine
+        NSHealthUpdateUsageDescription: Routine Dose Planner saves the patient's health readings to Apple Health.
         LSApplicationQueriesSchemes:
           - x-apple-health
 
     settings:
       base:
-        CODE_SIGN_ENTITLEMENTS: PillDaddy/PillDaddy.entitlements
+        PRODUCT_BUNDLE_IDENTIFIER: rodeo.fm.routine
+        CODE_SIGN_ENTITLEMENTS: RoutineDosePlanner/RoutineDosePlanner.entitlements
     dependencies:
-      - target: PillDaddyWidgets
+      - target: RoutineDosePlannerWidgets
         embed: true
-  PillDaddyTests:
+  RoutineDosePlannerTests:
     type: bundle.unit-test
     platform: iOS
     deploymentTarget: "26.0"
     sources:
-      - PillDaddyTests
+      - RoutineDosePlannerTests
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
     dependencies:
-      - target: PillDaddy
-  PillDaddyWidgets:
+      - target: RoutineDosePlanner
+  RoutineDosePlannerWidgets:
     type: app-extension
     platform: iOS
     deploymentTarget: "26.0"
     sources:
-      - PillDaddyWidgets
-      - path: PillDaddy/Shared
+      - RoutineDosePlannerWidgets
+      - path: RoutineDosePlanner/Shared
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: rodeo.fm.PillDaddy.widgets
+        PRODUCT_BUNDLE_IDENTIFIER: rodeo.fm.routine.widgets
     info:
-      path: PillDaddyWidgets/Info.plist
+      path: RoutineDosePlannerWidgets/Info.plist
       properties:
-        CFBundleDisplayName: PillDaddy Reminders
+        CFBundleDisplayName: Routine Reminders
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
 schemes:
-  PillDaddy:
+  RoutineDosePlanner:
     build:
       targets:
-        PillDaddy: all
-        PillDaddyTests: [test]
-        PillDaddyWidgets: all
+        RoutineDosePlanner: all
+        RoutineDosePlannerTests: [test]
+        RoutineDosePlannerWidgets: all
     run:
       debugEnabled: false
     test:
       targets:
-        - PillDaddyTests
-
+        - RoutineDosePlannerTests

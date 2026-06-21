@@ -1,4 +1,4 @@
-# Pill Daddy
+# Routine Dose Planner
 
 This iOS app is for care givers who need to track health metrics and medication intake. 
 
@@ -14,8 +14,8 @@ It should integrate with Apple Health to record metrics like:
 
 The elderly often take many medications and different times and with different requirements such as with meals, or before meals etc. 
 
-- Color coded pill regime: batches of medications taken at certain times. 
-  - Color manager configure what pills are in each batch 
+- Color coded routines: groups of medications taken at certain times. 
+  - Color manager configure what pills are in each routine 
 - Dose change notes to capture why a dose was changing. There should be continuity for a medication across changes in dosage. Medications should be linkable to communicate care continuity such as one beta blocker being swapped out for another. 
 - Reporting about historic doses per drug.
   - Be able to swap view from showing when drug was taken vs. when it was not taken. 
@@ -34,5 +34,5 @@ To enable this automation, the following GitHub Secrets must be configured in yo
 
 * `VERCEL_TOKEN`: Your Vercel Personal Access Token (for authentication).
 * `VERCEL_ORG_ID`: Your Vercel Organization or User account ID.
-* `VERCEL_PROJECT_ID`: The unique Project ID of your PillDaddy Vercel project.
+* `VERCEL_PROJECT_ID`: The unique Project ID of your Routine Dose Planner Vercel project.
 
