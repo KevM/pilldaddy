@@ -44,7 +44,7 @@ final class Medication {
     var hasVariableSchedule: Bool { weekdayDoseTargets != nil }
 
     init(name: String = "", strengthValue: Double = 0, strengthUnit: String = "mg",
-         dailyDoseTarget: Double = 1, form: String = "tablet",
+         dailyDoseTarget: Double = 1, weekdayDoseTargets: [Double]? = nil, form: String = "tablet",
          generalNotes: String = "", isActive: Bool = true, isPRN: Bool = false,
          createdAt: Date = .now, discontinuedAt: Date? = nil,
          uuid: UUID = UUID(), rxNormCode: String = "") {
@@ -52,6 +52,7 @@ final class Medication {
         self.strengthValue = strengthValue
         self.strengthUnit = strengthUnit
         self.dailyDoseTarget = dailyDoseTarget
+        self.weekdayDoseTargets = weekdayDoseTargets
         self.form = form
         self.generalNotes = generalNotes
         self.isActive = isActive
