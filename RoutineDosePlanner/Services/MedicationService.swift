@@ -55,24 +55,21 @@ enum MedicationService {
         return med
     }
 
-    /// Changes strength and/or per-routine quantities on the same medication and
-    /// records a `doseChanged` event with an old→new summary. Reason required.
+    /// Changes strength and/or the full per-routine allocation on the same medication
+    /// and records a `doseChanged` event with an old→new summary. `placements` is the
+    /// complete desired set: existing memberships absent from it are removed, new ones
+    /// are created, matching ones are updated. Reason required.
     static func changeDose(
         _ med: Medication,
         newStrengthValue: Double, newStrengthUnit: String,
         newDailyDoseTarget: Double,
-        newQuantities: [(item: RoutineItem, quantity: Double)],
+        placements: [(routine: Routine, quantity: Double)],
         reason: String,
         in context: ModelContext
     ) throws {
         try requireReason(reason)
 
-        // Prospective total = sum of quantities, using the new value where provided.
-        let overrides = Dictionary(uniqueKeysWithValues:
-            newQuantities.map { ($0.item.persistentModelID, $0.quantity) })
-        let prospective = (med.routineItems ?? []).reduce(0.0) { sum, item in
-            sum + (overrides[item.persistentModelID] ?? item.quantity)
-        }
+        let prospective = placements.reduce(0.0) { $0 + $1.quantity }
         if DoseAllocation.isOverTarget(allocated: prospective, target: newDailyDoseTarget) {
             throw DoseAllocationError.exceedsDailyTarget
         }
@@ -81,15 +78,31 @@ enum MedicationService {
         med.strengthValue = newStrengthValue
         med.strengthUnit = newStrengthUnit
         med.dailyDoseTarget = newDailyDoseTarget
-        for change in newQuantities {
-            change.item.quantity = change.quantity
+
+        // Reconcile memberships against the desired placement set.
+        let desired = Dictionary(uniqueKeysWithValues:
+            placements.map { ($0.routine.persistentModelID, $0.quantity) })
+        var existingRoutineIDs = Set<PersistentIdentifier>()
+        for item in med.routineItems ?? [] {
+            guard let routineID = item.routine?.persistentModelID else { continue }
+            if let qty = desired[routineID] {
+                item.quantity = qty
+                existingRoutineIDs.insert(routineID)
+            } else {
+                context.delete(item)
+            }
         }
+        for placement in placements where !existingRoutineIDs.contains(placement.routine.persistentModelID) {
+            context.insert(RoutineItem(quantity: placement.quantity,
+                                       medication: med, routine: placement.routine))
+        }
+
         let newSummary = doseSummary(med)
         context.insert(MedicationChangeEvent(
             type: .doseChanged, reasoning: reason,
             oldValue: oldSummary, newValue: newSummary, medication: med))
         try context.save()
-     }
+    }
 
     /// Adds a medication to a routine with a chosen quantity, rejecting anything
     /// that would push total allocation past the daily-dose target. Initial

@@ -64,7 +64,7 @@ struct MedicationServiceTests {
         try MedicationService.changeDose(
             med, newStrengthValue: 30, newStrengthUnit: "mg",
             newDailyDoseTarget: 1.0,
-            newQuantities: [(item: item, quantity: 0.5)],
+            placements: [(routine: blue, quantity: 0.5)],
             reason: "Reduced after dizziness", in: context)
 
         #expect(item.quantity == 0.5)
@@ -83,8 +83,50 @@ struct MedicationServiceTests {
         #expect(throws: MedicationServiceError.reasonRequired) {
             try MedicationService.changeDose(med, newStrengthValue: 15, newStrengthUnit: "mg",
                 newDailyDoseTarget: 1.0,
-                newQuantities: [], reason: "   ", in: context)
+                placements: [], reason: "   ", in: context)
         }
+    }
+
+    @Test
+    func testChangeDoseAddsNewRoutineMembership() throws {
+        let blue = Routine(name: "Blue")
+        let green = Routine(name: "Green")
+        context.insert(blue); context.insert(green)
+        let med = try MedicationService.addMedication(
+            name: "Metoprolol", strengthValue: 30, strengthUnit: "mg", form: "tablet",
+            isPRN: false, notes: "", dailyDoseTarget: 2,
+            placements: [(routine: blue, quantity: 1.0)], reason: "", in: context)
+
+        try MedicationService.changeDose(
+            med, newStrengthValue: 30, newStrengthUnit: "mg", newDailyDoseTarget: 2,
+            placements: [(routine: blue, quantity: 1.0), (routine: green, quantity: 1.0)],
+            reason: "Split across morning and evening", in: context)
+
+        let byRoutine = Dictionary(uniqueKeysWithValues:
+            (med.routineItems ?? []).map { ($0.routine?.name ?? "?", $0.quantity) })
+        #expect(byRoutine == ["Blue": 1.0, "Green": 1.0])
+        let doseEvents = (med.changeEvents ?? []).filter { $0.eventType == MedChangeType.doseChanged.rawValue }
+        #expect(doseEvents.count == 1)
+    }
+
+    @Test
+    func testChangeDoseRemovesOmittedRoutineMembership() throws {
+        let blue = Routine(name: "Blue")
+        let green = Routine(name: "Green")
+        context.insert(blue); context.insert(green)
+        let med = try MedicationService.addMedication(
+            name: "Metoprolol", strengthValue: 30, strengthUnit: "mg", form: "tablet",
+            isPRN: false, notes: "", dailyDoseTarget: 2,
+            placements: [(routine: blue, quantity: 1.0), (routine: green, quantity: 1.0)],
+            reason: "", in: context)
+
+        try MedicationService.changeDose(
+            med, newStrengthValue: 30, newStrengthUnit: "mg", newDailyDoseTarget: 2,
+            placements: [(routine: blue, quantity: 1.0)],
+            reason: "Dropped the evening dose", in: context)
+
+        #expect(med.routineItems?.count == 1)
+        #expect(med.routineItems?.first?.routine?.name == "Blue")
     }
 
     @Test
@@ -286,13 +328,12 @@ struct MedicationServiceTests {
             name: "Metoprolol", strengthValue: 30, strengthUnit: "mg", form: "tablet",
             isPRN: false, notes: "", dailyDoseTarget: 1,
             placements: [(routine: blue, quantity: 1.0)], reason: "", in: context)
-        let item = try #require(med.routineItems?.first)
 
         #expect(throws: DoseAllocationError.exceedsDailyTarget) {
             try MedicationService.changeDose(
                 med, newStrengthValue: 30, newStrengthUnit: "mg",
                 newDailyDoseTarget: 1,
-                newQuantities: [(item: item, quantity: 2.0)],
+                placements: [(routine: blue, quantity: 2.0)],
                 reason: "bump", in: context)
         }
     }
@@ -310,7 +351,7 @@ struct MedicationServiceTests {
         try MedicationService.changeDose(
             med, newStrengthValue: 30, newStrengthUnit: "mg",
             newDailyDoseTarget: 2,
-            newQuantities: [(item: item, quantity: 2.0)],
+            placements: [(routine: blue, quantity: 2.0)],
             reason: "increase", in: context)
 
         #expect(item.quantity == 2.0)

@@ -11,6 +11,10 @@ struct ChangeDoseSheet: View {
     @State private var strengthUnit = "mg"
     @State private var target = 1.0
     @State private var quantities: [PersistentIdentifier: Double] = [:]
+    @Query(sort: [SortDescriptor(\Routine.timeOfDay), SortDescriptor(\Routine.uuid)])
+    private var allRoutines: [Routine]
+
+    @State private var selected: Set<PersistentIdentifier> = []
     @State private var reason = ""
     @State private var errorMessage: String?
 
@@ -18,14 +22,9 @@ struct ChangeDoseSheet: View {
         !reason.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    private var prospectiveTotal: Double {
-        (medication.routineItems ?? []).reduce(0.0) { sum, item in
-            sum + (quantities[item.persistentModelID] ?? item.quantity)
-        }
-    }
-
     private var overAllocated: Bool {
-        DoseAllocation.isOverTarget(allocated: prospectiveTotal, target: target)
+        let total = selected.reduce(0.0) { $0 + (quantities[$1] ?? 1.0) }
+        return DoseAllocation.isOverTarget(allocated: total, target: target)
     }
 
     var body: some View {
@@ -33,20 +32,17 @@ struct ChangeDoseSheet: View {
             Form {
                 Section("New dose") {
                     StrengthInputField(value: $strengthValue, unit: $strengthUnit)
-
                     DoseQuantityField(title: "Doses per day", value: $target)
-
-                    ForEach(medication.routineItems ?? []) { item in
-                        let id = item.persistentModelID
-                        DoseQuantityField(
-                            title: item.routine?.name ?? "—",
-                            value: Binding(get: { quantities[id] ?? item.quantity },
-                                           set: { quantities[id] = $0 }))
-                    }
-
-                    Text("\(DoseFormat.qty(prospectiveTotal)) of \(DoseFormat.qty(target))/day · \(DoseFormat.qty(prospectiveTotal * strengthValue)) of \(DoseFormat.qty(target * strengthValue)) \(strengthUnit)")
-                        .font(.caption)
-                        .foregroundStyle(overAllocated ? .red : .secondary)
+                }
+                if !medication.isPRN {
+                    RoutineAllocationSection(
+                        title: "Allocate across routines",
+                        routines: allRoutines,
+                        selected: $selected,
+                        quantities: $quantities,
+                        target: target,
+                        strengthValue: strengthValue,
+                        strengthUnit: strengthUnit)
                 }
                 Section("Reason (required)") {
                     TextField("Why is the dose changing?", text: $reason, axis: .vertical)
@@ -65,6 +61,12 @@ struct ChangeDoseSheet: View {
                 strengthValue = medication.strengthValue
                 strengthUnit = medication.strengthUnit
                 target = medication.dailyDoseTarget
+                for item in medication.routineItems ?? [] {
+                    guard let routine = item.routine else { continue }
+                    let id = routine.persistentModelID
+                    selected.insert(id)
+                    quantities[id] = item.quantity
+                }
             }
             .alert("Cannot Save", isPresented: Binding(
                 get: { errorMessage != nil },
@@ -80,15 +82,16 @@ struct ChangeDoseSheet: View {
     }
 
     private func save() {
-        let changes = (medication.routineItems ?? []).compactMap {
-            item -> (item: RoutineItem, quantity: Double)? in
-            guard let q = quantities[item.persistentModelID] else { return nil }
-            return (item, q)
+        let routinesByID = Dictionary(uniqueKeysWithValues:
+            allRoutines.map { ($0.persistentModelID, $0) })
+        let placements: [(routine: Routine, quantity: Double)] = selected.compactMap { id in
+            guard let routine = routinesByID[id] else { return nil }
+            return (routine, quantities[id] ?? 1.0)
         }
         do {
             try MedicationService.changeDose(
                 medication, newStrengthValue: strengthValue, newStrengthUnit: strengthUnit,
-                newDailyDoseTarget: target, newQuantities: changes,
+                newDailyDoseTarget: target, placements: placements,
                 reason: reason, in: context)
             dismiss()
         } catch {
