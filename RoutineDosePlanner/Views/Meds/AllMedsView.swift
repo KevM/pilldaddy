@@ -55,8 +55,9 @@ struct AllMedsView: View {
                 tag("Discontinued")
             } else if med.isPRN {
                 tag("PRN")
-            } else {
-                DoseAllocationBadge(medication: med)
+            } else if DoseAllocation.needsAttention(med) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
             }
         }
     }

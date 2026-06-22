@@ -36,9 +36,14 @@ struct AddToRoutineSheet: View {
                     DoseQuantityField(
                         title: "Quantity", value: $quantity,
                         range: 0.5...20, step: 0.5,
-                        max: DoseAllocation.remaining(medication))
-                    Text("\(DoseFormat.qty(DoseAllocation.remaining(medication))) of \(DoseFormat.qty(medication.dailyDoseTarget))/day remaining")
-                        .font(.caption).foregroundStyle(.secondary)
+                        max: selectedRoutine.map { DoseAllocation.remaining(medication, addingTo: $0) })
+                    if let routine = selectedRoutine, let days = RecurrenceLabel.short(for: routine) {
+                        Text("\(DoseFormat.qty(DoseAllocation.remaining(medication, addingTo: routine))) remaining on \(days)")
+                            .font(.caption).foregroundStyle(.secondary)
+                    } else if let routine = selectedRoutine {
+                        Text("\(DoseFormat.qty(DoseAllocation.remaining(medication, addingTo: routine))) remaining per day")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                 }
             }
             .navigationTitle("Add to routine")
@@ -48,9 +53,9 @@ struct AddToRoutineSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Add") { add() }
                         .disabled(selectedRoutine == nil ||
-                                  DoseAllocation.isOverTarget(
-                                    allocated: DoseAllocation.allocated(medication) + quantity,
-                                    target: medication.dailyDoseTarget))
+                                  selectedRoutine.map {
+                                      DoseAllocation.adding(quantity, to: $0, exceedsTargetFor: medication)
+                                  } ?? true)
                 }
             }
             .alert("Cannot Add", isPresented: Binding(
@@ -62,7 +67,7 @@ struct AddToRoutineSheet: View {
                 if let errorMessage { Text(errorMessage) }
             }
             .onAppear {
-                quantity = min(1.0, max(0.5, DoseAllocation.remaining(medication)))
+                quantity = 1.0
             }
         }
     }

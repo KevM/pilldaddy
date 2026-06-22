@@ -76,9 +76,9 @@ struct RoutineEditor: View {
                             ForEach(addableMeds(to: routine)) { med in
                                 Button(med.name) {
                                     addingMed = med
-                                    addQuantity = min(1.0, max(0.5, DoseAllocation.remaining(med)))
+                                    addQuantity = min(1.0, max(0.5, DoseAllocation.remaining(med, addingTo: routine)))
                                 }
-                                .disabled(DoseAllocation.remaining(med) <= 0)
+                                .disabled(DoseAllocation.remaining(med, addingTo: routine) <= 0)
                             }
                         }
                     }
@@ -107,9 +107,13 @@ struct RoutineEditor: View {
                         DoseQuantityField(
                             title: "Quantity", value: $addQuantity,
                             range: 0.5...20, step: 0.5,
-                            max: DoseAllocation.remaining(med))
-                        Text("\(DoseFormat.qty(DoseAllocation.remaining(med))) of \(DoseFormat.qty(med.dailyDoseTarget))/day remaining")
-                            .font(.caption).foregroundStyle(.secondary)
+                            max: routine.map { DoseAllocation.remaining(med, addingTo: $0) })
+                        if let routine {
+                            let slack = DoseFormat.qty(DoseAllocation.remaining(med, addingTo: routine))
+                            let scope = RecurrenceLabel.short(for: routine).map { " on \($0)" } ?? " per day"
+                            Text("\(slack) remaining\(scope)")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
                     }
                     .navigationTitle("Add \(med.name)")
                     .navigationBarTitleDisplayMode(.inline)
@@ -128,7 +132,7 @@ struct RoutineEditor: View {
                                     errorMessage = errorMessage(for: error)
                                 }
                             }
-                            .disabled(DoseAllocation.isOverTarget(allocated: DoseAllocation.allocated(med) + addQuantity, target: med.dailyDoseTarget))
+                            .disabled(routine.map { DoseAllocation.adding(addQuantity, to: $0, exceedsTargetFor: med) } ?? false)
                         }
                     }
                     .alert("Cannot Add", isPresented: Binding(
