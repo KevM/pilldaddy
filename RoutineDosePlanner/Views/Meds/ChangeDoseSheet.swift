@@ -36,6 +36,7 @@ struct ChangeDoseSheet: View {
                 }
                 if !medication.isPRN {
                     RoutineAllocationSection(
+                        title: "Allocate across routines",
                         routines: allRoutines,
                         selected: $selected,
                         quantities: $quantities,

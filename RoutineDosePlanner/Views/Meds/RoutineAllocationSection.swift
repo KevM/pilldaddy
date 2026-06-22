@@ -5,6 +5,7 @@ import SwiftData
 /// with a running "X of Y/day allocated" summary that turns red when over target.
 /// Used by both the Add Medication editor and the Change Dose sheet.
 struct RoutineAllocationSection: View {
+    let title: String
     let routines: [Routine]
     @Binding var selected: Set<PersistentIdentifier>
     @Binding var quantities: [PersistentIdentifier: Double]
@@ -27,7 +28,7 @@ struct RoutineAllocationSection: View {
             }
         } header: {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Add to routines")
+                Text(title)
                 let isOver = DoseAllocation.isOverTarget(allocated: assignedTotal, target: target)
                 Text("\(DoseFormat.qty(assignedTotal)) of \(DoseFormat.qty(target))/day allocated (\(DoseFormat.qty(assignedTotal * strengthValue)) of \(DoseFormat.qty(target * strengthValue)) \(strengthUnit))")
                     .font(.caption)

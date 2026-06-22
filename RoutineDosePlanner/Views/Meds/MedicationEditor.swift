@@ -61,6 +61,7 @@ struct MedicationEditor: View {
 
                 if isAdd && !isPRN {
                     RoutineAllocationSection(
+                        title: "Add to routines",
                         routines: routines,
                         selected: $selected,
                         quantities: $quantities,
@@ -96,8 +97,6 @@ struct MedicationEditor: View {
             }
         }
     }
-
-
 
     private func load() {
         guard case .edit(let med) = mode else { return }
