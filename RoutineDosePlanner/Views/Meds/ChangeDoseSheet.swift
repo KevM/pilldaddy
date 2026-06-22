@@ -80,15 +80,15 @@ struct ChangeDoseSheet: View {
     }
 
     private func save() {
-        let changes = (medication.routineItems ?? []).compactMap {
-            item -> (item: RoutineItem, quantity: Double)? in
-            guard let q = quantities[item.persistentModelID] else { return nil }
-            return (item, q)
-        }
+        let placements: [(routine: Routine, quantity: Double)] =
+            (medication.routineItems ?? []).compactMap { item in
+                guard let routine = item.routine else { return nil }
+                return (routine, quantities[item.persistentModelID] ?? item.quantity)
+            }
         do {
             try MedicationService.changeDose(
                 medication, newStrengthValue: strengthValue, newStrengthUnit: strengthUnit,
-                newDailyDoseTarget: target, newQuantities: changes,
+                newDailyDoseTarget: target, placements: placements,
                 reason: reason, in: context)
             dismiss()
         } catch {
