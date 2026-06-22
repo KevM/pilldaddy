@@ -302,7 +302,7 @@ struct MedicationServiceTests {
         try MedicationService.addToRoutine(med, blue, quantity: 1.5, in: context)
 
         #expect(med.routineItems?.count == 1)
-        #expect(DoseAllocation.allocated(med) == 1.5)
+        #expect((med.routineItems ?? []).reduce(0) { $0 + $1.quantity } == 1.5)
     }
 
     @Test
@@ -442,7 +442,7 @@ struct MedicationServiceTests {
 
         #expect(item.routine?.name == "Afternoon")
         #expect(item.quantity == 1.5)
-        #expect(DoseAllocation.allocated(med) == 1.5)
+        #expect((med.routineItems ?? []).reduce(0) { $0 + $1.quantity } == 1.5)
         let event = try #require((med.changeEvents ?? []).first {
             $0.eventType == MedChangeType.scheduleChanged.rawValue })
         #expect(event.oldValue == "Morning · 1.5 tablet")
