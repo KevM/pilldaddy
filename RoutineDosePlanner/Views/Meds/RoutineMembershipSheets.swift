@@ -11,9 +11,14 @@ struct AddToRoutineSheet: View {
     @Query(sort: [SortDescriptor(\Routine.timeOfDay), SortDescriptor(\Routine.uuid)])
     private var allRoutines: [Routine]
 
-    @State private var selectedRoutine: Routine?
+    @State private var selectedRoutineID: PersistentIdentifier?
     @State private var quantity = 1.0
     @State private var errorMessage: String?
+
+    private var selectedRoutine: Routine? {
+        guard let selectedRoutineID else { return nil }
+        return available.first { $0.persistentModelID == selectedRoutineID }
+    }
 
     private var available: [Routine] {
         let present = Set((medication.routineItems ?? []).compactMap { $0.routine?.persistentModelID })
@@ -27,10 +32,11 @@ struct AddToRoutineSheet: View {
                     Text("This medication is already in every routine.")
                         .foregroundStyle(.secondary)
                 } else {
-                    Picker("Routine", selection: $selectedRoutine) {
-                        Text("Select…").tag(Routine?.none)
+                    Picker("Routine", selection: $selectedRoutineID) {
+                        Text("Select…").tag(PersistentIdentifier?.none)
                         ForEach(available) { routine in
-                            Text(routine.name.isEmpty ? "Routine" : routine.name).tag(Routine?.some(routine))
+                            Text(routine.name.isEmpty ? "Routine" : routine.name)
+                                .tag(PersistentIdentifier?.some(routine.persistentModelID))
                         }
                     }
                     DoseQuantityField(

@@ -7,9 +7,14 @@ struct ChangeInstructionsSheet: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
 
-    @State private var selection: RoutineItem?
+    @State private var selectionID: PersistentIdentifier?
     @State private var instructions = ""
     @State private var reason = ""
+
+    private var selection: RoutineItem? {
+        guard let selectionID else { return nil }
+        return (medication.routineItems ?? []).first { $0.persistentModelID == selectionID }
+    }
 
     private var reasonValid: Bool {
         !reason.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -19,9 +24,10 @@ struct ChangeInstructionsSheet: View {
         NavigationStack {
             Form {
                 Section("Membership") {
-                    Picker("Routine", selection: $selection) {
+                    Picker("Routine", selection: $selectionID) {
                         ForEach(medication.routineItems ?? []) { item in
-                            Text(item.routine?.name ?? "—").tag(Optional(item))
+                            Text(item.routine?.name ?? "—")
+                                .tag(PersistentIdentifier?.some(item.persistentModelID))
                         }
                     }
                 }
@@ -41,11 +47,11 @@ struct ChangeInstructionsSheet: View {
                 }
             }
             .onAppear {
-                selection = (medication.routineItems ?? []).first
+                selectionID = (medication.routineItems ?? []).first?.persistentModelID
                 instructions = selection?.instructionsOverride ?? ""
             }
-            .onChange(of: selection) { _, new in
-                instructions = new?.instructionsOverride ?? ""
+            .onChange(of: selectionID) { _, newID in
+                instructions = selection?.instructionsOverride ?? ""
             }
         }
     }
