@@ -60,23 +60,13 @@ struct MedicationEditor: View {
                 }
 
                 if isAdd && !isPRN {
-                    Section {
-                        if routines.isEmpty {
-                            Text("No routines yet — add one from the Meds tab.")
-                                .foregroundStyle(.secondary)
-                        }
-                        ForEach(routines) { routine in
-                            routineAssignRow(routine)
-                        }
-                    } header: {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Add to routines")
-                            let isOver = DoseAllocation.isOverTarget(allocated: assignedTotal, target: dailyDoseTarget)
-                            Text("\(DoseFormat.qty(assignedTotal)) of \(DoseFormat.qty(dailyDoseTarget))/day allocated (\(DoseFormat.qty(assignedTotal * strengthValue)) of \(DoseFormat.qty(dailyDoseTarget * strengthValue)) \(strengthUnit))")
-                                .font(.caption)
-                                .foregroundStyle(isOver ? .red : .secondary)
-                        }
-                    }
+                    RoutineAllocationSection(
+                        routines: routines,
+                        selected: $selected,
+                        quantities: $quantities,
+                        target: dailyDoseTarget,
+                        strengthValue: strengthValue,
+                        strengthUnit: strengthUnit)
                     Section("Why started? (optional)") {
                         TextField("Reason", text: $reason, axis: .vertical)
                     }
@@ -107,34 +97,7 @@ struct MedicationEditor: View {
         }
     }
 
-    @ViewBuilder
-    private func routineAssignRow(_ routine: Routine) -> some View {
-        let id = routine.persistentModelID
-        let isOn = selected.contains(id)
-        VStack(alignment: .leading) {
-            Toggle(isOn: Binding(
-                get: { isOn },
-                set: { on in
-                    if on { selected.insert(id); quantities[id] = quantities[id] ?? 1.0 }
-                    else { selected.remove(id) }
-                })) {
-                HStack {
-                    Circle().fill(Color(hex: routine.colorHex)).frame(width: 12, height: 12)
-                    Text(routine.name.isEmpty ? "Routine" : routine.name)
-                    Spacer()
-                    Text(routine.timeOfDay, style: .time)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            if isOn {
-                DoseQuantityField(
-                    title: "Quantity",
-                    value: Binding(get: { quantities[id] ?? 1.0 },
-                                   set: { quantities[id] = $0 }),
-                    range: 0.5...20, step: 0.5)
-            }
-        }
-    }
+
 
     private func load() {
         guard case .edit(let med) = mode else { return }
