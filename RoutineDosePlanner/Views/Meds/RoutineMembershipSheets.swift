@@ -11,9 +11,14 @@ struct AddToRoutineSheet: View {
     @Query(sort: [SortDescriptor(\Routine.timeOfDay), SortDescriptor(\Routine.uuid)])
     private var allRoutines: [Routine]
 
-    @State private var selectedRoutine: Routine?
+    @State private var selectedRoutineID: PersistentIdentifier?
     @State private var quantity = 1.0
     @State private var errorMessage: String?
+
+    private var selectedRoutine: Routine? {
+        guard let selectedRoutineID else { return nil }
+        return available.first { $0.persistentModelID == selectedRoutineID }
+    }
 
     private var available: [Routine] {
         let present = Set((medication.routineItems ?? []).compactMap { $0.routine?.persistentModelID })
@@ -27,18 +32,24 @@ struct AddToRoutineSheet: View {
                     Text("This medication is already in every routine.")
                         .foregroundStyle(.secondary)
                 } else {
-                    Picker("Routine", selection: $selectedRoutine) {
-                        Text("Select…").tag(Routine?.none)
+                    Picker("Routine", selection: $selectedRoutineID) {
+                        Text("Select…").tag(PersistentIdentifier?.none)
                         ForEach(available) { routine in
-                            Text(routine.name.isEmpty ? "Routine" : routine.name).tag(Routine?.some(routine))
+                            Text(routine.name.isEmpty ? "Routine" : routine.name)
+                                .tag(PersistentIdentifier?.some(routine.persistentModelID))
                         }
                     }
                     DoseQuantityField(
                         title: "Quantity", value: $quantity,
                         range: 0.5...20, step: 0.5,
-                        max: DoseAllocation.remaining(medication))
-                    Text("\(DoseFormat.qty(DoseAllocation.remaining(medication))) of \(DoseFormat.qty(medication.dailyDoseTarget))/day remaining")
-                        .font(.caption).foregroundStyle(.secondary)
+                        max: selectedRoutine.map { DoseAllocation.remaining(medication, addingTo: $0) })
+                    if let routine = selectedRoutine, let days = RecurrenceLabel.short(for: routine) {
+                        Text("\(DoseFormat.qty(DoseAllocation.remaining(medication, addingTo: routine))) remaining on \(days)")
+                            .font(.caption).foregroundStyle(.secondary)
+                    } else if let routine = selectedRoutine {
+                        Text("\(DoseFormat.qty(DoseAllocation.remaining(medication, addingTo: routine))) remaining per day")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                 }
             }
             .navigationTitle("Add to routine")
@@ -48,9 +59,9 @@ struct AddToRoutineSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Add") { add() }
                         .disabled(selectedRoutine == nil ||
-                                  DoseAllocation.isOverTarget(
-                                    allocated: DoseAllocation.allocated(medication) + quantity,
-                                    target: medication.dailyDoseTarget))
+                                  selectedRoutine.map {
+                                      DoseAllocation.adding(quantity, to: $0, exceedsTargetFor: medication)
+                                  } ?? true)
                 }
             }
             .alert("Cannot Add", isPresented: Binding(
@@ -62,7 +73,7 @@ struct AddToRoutineSheet: View {
                 if let errorMessage { Text(errorMessage) }
             }
             .onAppear {
-                quantity = min(1.0, max(0.5, DoseAllocation.remaining(medication)))
+                quantity = 1.0
             }
         }
     }

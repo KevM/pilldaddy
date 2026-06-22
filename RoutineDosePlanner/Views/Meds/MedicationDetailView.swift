@@ -21,7 +21,7 @@ struct MedicationDetailView: View {
             Section {
                 LabeledContent("Strength", value: medication.strengthDescription)
                 LabeledContent("Form", value: medication.form)
-                DoseAllocationBadge(medication: medication, showCaption: true)
+                DoseSummaryRow(medication: medication)
                 if medication.isPRN {
                     Text("As needed (PRN)").foregroundStyle(.secondary)
                 }
@@ -49,7 +49,12 @@ struct MedicationDetailView: View {
                             HStack {
                                 Circle().fill(Color(hex: item.routine?.colorHex ?? "#8E8E93"))
                                     .frame(width: 10, height: 10)
-                                Text(item.routine?.name ?? "—")
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(item.routine?.name ?? "—")
+                                    if let routine = item.routine, let days = RecurrenceLabel.short(for: routine) {
+                                        Text(days).font(.caption2).foregroundStyle(.secondary)
+                                    }
+                                }
                                 Spacer()
                                 Text("\(DoseFormat.qty(item.quantity)) \(medication.form)")
                                     .foregroundStyle(.secondary)
@@ -58,7 +63,7 @@ struct MedicationDetailView: View {
                         .buttonStyle(.plain)
                     }
                     Button("Add to routine…") { sheet = .addToRoutine }
-                        .disabled(DoseAllocation.remaining(medication) <= 0)
+                        .disabled(!hasAnyRoutineSlack)
                 }
             }
 
@@ -114,6 +119,16 @@ struct MedicationDetailView: View {
         } message: {
             if let errorMessage { Text(errorMessage) }
         }
+    }
+
+    @Query(sort: [SortDescriptor(\Routine.timeOfDay), SortDescriptor(\Routine.uuid)])
+    private var allRoutines: [Routine]
+
+    private var hasAnyRoutineSlack: Bool {
+        let present = Set((medication.routineItems ?? []).compactMap { $0.routine?.persistentModelID })
+        return allRoutines
+            .filter { !present.contains($0.persistentModelID) }
+            .contains { DoseAllocation.remaining(medication, addingTo: $0) > 0 }
     }
 }
 

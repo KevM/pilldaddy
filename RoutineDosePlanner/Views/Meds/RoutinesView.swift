@@ -68,7 +68,11 @@ struct RoutinesView: View {
                 Text(item.medication?.name ?? "—")
                 Text(item.medication?.strengthDescription ?? "")
                     .font(.caption).foregroundStyle(.secondary)
-                if let med = item.medication { DoseAllocationBadge(medication: med) }
+                if let med = item.medication, let mismatch = DoseSummaryFormatter.mismatch(for: med) {
+                    Label(mismatch, systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                }
             }
             Spacer()
             Text("\(DoseFormat.qty(item.quantity)) \(item.medication?.form ?? "")")

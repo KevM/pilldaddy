@@ -52,12 +52,8 @@ enum DayQuery {
 
     /// Whether a routine occurs on the given day (daily always; weekdays per its list).
     static func recurs(_ routine: Routine, on day: Date) -> Bool {
-        switch RecurrenceKind(rawValue: routine.recurrenceKind) ?? .daily {
-        case .daily: return true
-        case .weekdays:
-            let wd = Calendar.current.component(.weekday, from: day)
-            return (routine.weekdays ?? []).contains(wd)
-        }
+        let wd = Calendar.current.component(.weekday, from: day)
+        return routine.firingWeekdays.contains(wd)
     }
 
     /// The slot datetime for a routine on a day: that calendar day + the routine's clock time.

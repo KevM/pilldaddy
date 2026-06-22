@@ -302,7 +302,7 @@ struct MedicationServiceTests {
         try MedicationService.addToRoutine(med, blue, quantity: 1.5, in: context)
 
         #expect(med.routineItems?.count == 1)
-        #expect(DoseAllocation.allocated(med) == 1.5)
+        #expect((med.routineItems ?? []).reduce(0) { $0 + $1.quantity } == 1.5)
     }
 
     @Test
@@ -442,7 +442,7 @@ struct MedicationServiceTests {
 
         #expect(item.routine?.name == "Afternoon")
         #expect(item.quantity == 1.5)
-        #expect(DoseAllocation.allocated(med) == 1.5)
+        #expect((med.routineItems ?? []).reduce(0) { $0 + $1.quantity } == 1.5)
         let event = try #require((med.changeEvents ?? []).first {
             $0.eventType == MedChangeType.scheduleChanged.rawValue })
         #expect(event.oldValue == "Morning · 1.5 tablet")
@@ -523,6 +523,120 @@ struct MedicationServiceTests {
         #expect(throws: MembershipError.alreadyInRoutine) {
             try MedicationService.addToRoutine(med, blue, quantity: 1.0, in: context)
         }
+    }
+
+    @Test
+    func testAddToRoutineAllowsSameQuantityOnNonOverlappingDays() throws {
+        // Thu target 1, Sat target 2. Adding 2 to a Saturday routine is fine even
+        // though a Thursday routine already holds 1 (different days don't stack).
+        let thu = Routine(name: "Thu", recurrenceKind: .weekdays, weekdays: [5])
+        let sat = Routine(name: "Sat", recurrenceKind: .weekdays, weekdays: [7])
+        context.insert(thu); context.insert(sat)
+        var perWeekday = Array(repeating: 0.0, count: 7)
+        perWeekday[4] = 1; perWeekday[6] = 2
+        let med = try MedicationService.addMedication(
+            name: "Warfarin", strengthValue: 5, strengthUnit: "mg", form: "tablet",
+            isPRN: false, notes: "", dailyDoseTarget: 0, weekdayDoseTargets: perWeekday,
+            placements: [(routine: thu, quantity: 1.0)], reason: "", in: context)
+
+        try MedicationService.addToRoutine(med, sat, quantity: 2.0, in: context)
+
+        #expect(DoseAllocation.status(med) == .full)
+    }
+
+    @Test
+    func testAddToRoutineRejectsOverfillingASingleDay() throws {
+        // Daily target 1, already a daily routine at 1 => any added daily routine overflows.
+        let morning = Routine(name: "Morning", recurrenceKind: .daily)
+        let evening = Routine(name: "Evening", recurrenceKind: .daily)
+        context.insert(morning); context.insert(evening)
+        let med = try MedicationService.addMedication(
+            name: "Metoprolol", strengthValue: 30, strengthUnit: "mg", form: "tablet",
+            isPRN: false, notes: "", dailyDoseTarget: 1,
+            placements: [(routine: morning, quantity: 1.0)], reason: "", in: context)
+
+        #expect(throws: DoseAllocationError.exceedsDailyTarget) {
+            try MedicationService.addToRoutine(med, evening, quantity: 0.5, in: context)
+        }
+    }
+
+    @Test
+    func testAddMedicationRejectsVariableTargetOverflowOnOneDay() throws {
+        let sat = Routine(name: "Sat", recurrenceKind: .weekdays, weekdays: [7])
+        context.insert(sat)
+        var perWeekday = Array(repeating: 0.0, count: 7)
+        perWeekday[6] = 1 // Saturday target 1
+        #expect(throws: DoseAllocationError.exceedsDailyTarget) {
+            try MedicationService.addMedication(
+                name: "Warfarin", strengthValue: 5, strengthUnit: "mg", form: "tablet",
+                isPRN: false, notes: "", dailyDoseTarget: 0, weekdayDoseTargets: perWeekday,
+                placements: [(routine: sat, quantity: 2.0)], reason: "", in: context)
+        }
+    }
+
+    @Test
+    func testChangeDoseStoresVariableTargets() throws {
+        let thu = Routine(name: "Thu", recurrenceKind: .weekdays, weekdays: [5])
+        let sat = Routine(name: "Sat", recurrenceKind: .weekdays, weekdays: [7])
+        context.insert(thu); context.insert(sat)
+        let med = try MedicationService.addMedication(
+            name: "Warfarin", strengthValue: 5, strengthUnit: "mg", form: "tablet",
+            isPRN: false, notes: "", dailyDoseTarget: 1,
+            placements: [(routine: thu, quantity: 1.0)], reason: "", in: context)
+
+        var perWeekday = Array(repeating: 0.0, count: 7)
+        perWeekday[4] = 1; perWeekday[6] = 2
+        try MedicationService.changeDose(
+            med, newStrengthValue: 5, newStrengthUnit: "mg", newDailyDoseTarget: 0,
+            newWeekdayDoseTargets: perWeekday,
+            placements: [(routine: thu, quantity: 1.0), (routine: sat, quantity: 2.0)],
+            reason: "Adjusted weekly schedule", in: context)
+
+        #expect(med.weekdayDoseTargets == perWeekday)
+        #expect(DoseAllocation.status(med) == .full)
+    }
+
+    @Test
+    func testMoveToRoutineRejectedWhenDestinationDayWouldOverfill() throws {
+        // Saturday target 1 already met by a Saturday item; moving a Thursday item
+        // (qty 1) onto Saturday would make Saturday 2 > 1.
+        let thu = Routine(name: "Thu", recurrenceKind: .weekdays, weekdays: [5])
+        let sat = Routine(name: "Sat", recurrenceKind: .weekdays, weekdays: [7])
+        context.insert(thu); context.insert(sat)
+        var perWeekday = Array(repeating: 0.0, count: 7)
+        perWeekday[4] = 1; perWeekday[6] = 1
+        let med = try MedicationService.addMedication(
+            name: "Warfarin", strengthValue: 5, strengthUnit: "mg", form: "tablet",
+            isPRN: false, notes: "", dailyDoseTarget: 0, weekdayDoseTargets: perWeekday,
+            placements: [(routine: thu, quantity: 1.0), (routine: sat, quantity: 1.0)],
+            reason: "", in: context)
+        let thuItem = try #require((med.routineItems ?? []).first { $0.routine?.name == "Thu" })
+
+        #expect(throws: MembershipError.alreadyInRoutine) {
+            // Sat already has this med — move is blocked by the duplicate guard first.
+            try MedicationService.moveToRoutine(thuItem, to: sat, in: context)
+        }
+    }
+
+    @Test
+    func testMoveToRoutineRejectedOnOverfillToEmptyDestination() throws {
+        // Med on Thursday (target Thu=1, Sat=0). Moving it to Saturday (target 0)
+        // would make Saturday 1 > 0.
+        let thu = Routine(name: "Thu", recurrenceKind: .weekdays, weekdays: [5])
+        let sat = Routine(name: "Sat", recurrenceKind: .weekdays, weekdays: [7])
+        context.insert(thu); context.insert(sat)
+        var perWeekday = Array(repeating: 0.0, count: 7)
+        perWeekday[4] = 1 // Thu target 1, Sat target 0
+        let med = try MedicationService.addMedication(
+            name: "Warfarin", strengthValue: 5, strengthUnit: "mg", form: "tablet",
+            isPRN: false, notes: "", dailyDoseTarget: 0, weekdayDoseTargets: perWeekday,
+            placements: [(routine: thu, quantity: 1.0)], reason: "", in: context)
+        let thuItem = try #require(med.routineItems?.first)
+
+        #expect(throws: DoseAllocationError.exceedsDailyTarget) {
+            try MedicationService.moveToRoutine(thuItem, to: sat, in: context)
+        }
+        #expect(thuItem.routine?.name == "Thu") // unchanged
     }
 }
 

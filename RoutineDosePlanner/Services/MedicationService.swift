@@ -28,18 +28,19 @@ enum MedicationService {
     static func addMedication(
         name: String, strengthValue: Double, strengthUnit: String, form: String,
         isPRN: Bool, notes: String, dailyDoseTarget: Double = 1,
+        weekdayDoseTargets: [Double]? = nil,
         placements: [(routine: Routine, quantity: Double)],
         reason: String,
         in context: ModelContext
     ) throws -> Medication {
         if !isPRN {
-            let total = placements.reduce(0) { $0 + $1.quantity }
-            if DoseAllocation.isOverTarget(allocated: total, target: dailyDoseTarget) {
+            if DoseAllocation.placementsOverTarget(
+                daily: dailyDoseTarget, perWeekday: weekdayDoseTargets, placements: placements) {
                 throw DoseAllocationError.exceedsDailyTarget
             }
         }
         let med = Medication(name: name, strengthValue: strengthValue, strengthUnit: strengthUnit,
-                             dailyDoseTarget: dailyDoseTarget, form: form,
+                             dailyDoseTarget: dailyDoseTarget, weekdayDoseTargets: weekdayDoseTargets, form: form,
                              generalNotes: notes, isPRN: isPRN)
         context.insert(med)
 
@@ -63,14 +64,15 @@ enum MedicationService {
         _ med: Medication,
         newStrengthValue: Double, newStrengthUnit: String,
         newDailyDoseTarget: Double,
+        newWeekdayDoseTargets: [Double]? = nil,
         placements: [(routine: Routine, quantity: Double)],
         reason: String,
         in context: ModelContext
     ) throws {
         try requireReason(reason)
 
-        let prospective = placements.reduce(0.0) { $0 + $1.quantity }
-        if DoseAllocation.isOverTarget(allocated: prospective, target: newDailyDoseTarget) {
+        if DoseAllocation.placementsOverTarget(
+            daily: newDailyDoseTarget, perWeekday: newWeekdayDoseTargets, placements: placements) {
             throw DoseAllocationError.exceedsDailyTarget
         }
 
@@ -78,6 +80,7 @@ enum MedicationService {
         med.strengthValue = newStrengthValue
         med.strengthUnit = newStrengthUnit
         med.dailyDoseTarget = newDailyDoseTarget
+        med.weekdayDoseTargets = newWeekdayDoseTargets
 
         // Reconcile memberships against the desired placement set.
         let desired = Dictionary(uniqueKeysWithValues:
@@ -115,7 +118,7 @@ enum MedicationService {
         let duplicate = (routine.items ?? []).contains { $0.medication?.persistentModelID == medID }
         if duplicate { throw MembershipError.alreadyInRoutine }
 
-        if DoseAllocation.isOverTarget(allocated: DoseAllocation.allocated(med) + quantity, target: med.dailyDoseTarget) {
+        if DoseAllocation.adding(quantity, to: routine, exceedsTargetFor: med) {
             throw DoseAllocationError.exceedsDailyTarget
         }
         let item = RoutineItem(quantity: quantity, medication: med, routine: routine)
@@ -147,7 +150,10 @@ enum MedicationService {
         let duplicate = (routine.items ?? []).contains { $0.medication?.persistentModelID == medID }
         if duplicate { throw MembershipError.alreadyInRoutine }
 
-        let med = item.medication
+        guard let med = item.medication else { return }
+        if DoseAllocation.moving(item, to: routine) {
+            throw DoseAllocationError.exceedsDailyTarget
+        }
         let old = membershipDescription(item)
         item.routine = routine
         let new = membershipDescription(item)

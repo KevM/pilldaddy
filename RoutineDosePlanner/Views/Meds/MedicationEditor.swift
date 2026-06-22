@@ -21,6 +21,8 @@ struct MedicationEditor: View {
     @State private var strengthValue = 0.0
     @State private var strengthUnit = "mg"
     @State private var dailyDoseTarget = 1.0
+    @State private var variesByDay = false
+    @State private var weekdayTargets = Array(repeating: 1.0, count: 7)
     @State private var form = "tablet"
     @State private var notes = ""
     @State private var isPRN = false
@@ -34,13 +36,20 @@ struct MedicationEditor: View {
         return false
     }
 
-    private var assignedTotal: Double {
-        selected.reduce(0.0) { $0 + (quantities[$1] ?? 1.0) }
+    private var resolvedWeekdayTargets: [Double]? {
+        variesByDay ? WeekdayDoseTargets.collapse(weekdayTargets).perWeekday : nil
     }
-
+    private var resolvedDaily: Double {
+        variesByDay ? WeekdayDoseTargets.collapse(weekdayTargets).daily : dailyDoseTarget
+    }
     private var saveBlocked: Bool {
         guard isAdd, !isPRN else { return false }
-        return dailyDoseTarget <= 0 || DoseAllocation.isOverTarget(allocated: assignedTotal, target: dailyDoseTarget)
+        if resolvedWeekdayTargets == nil && resolvedDaily <= 0 { return true }
+        let placements = routines
+            .filter { selected.contains($0.persistentModelID) }
+            .map { (routine: $0, quantity: quantities[$0.persistentModelID] ?? 1.0) }
+        return DoseAllocation.placementsOverTarget(
+            daily: resolvedDaily, perWeekday: resolvedWeekdayTargets, placements: placements)
     }
 
     var body: some View {
@@ -54,7 +63,19 @@ struct MedicationEditor: View {
                     TextField("Form (e.g. tablet)", text: $form)
                     Toggle("As needed (PRN)", isOn: $isPRN)
                     if isAdd && !isPRN {
-                        DoseQuantityField(title: "Doses per day", value: $dailyDoseTarget)
+                        Toggle("Amount varies by day of week", isOn: $variesByDay)
+                        if variesByDay {
+                            ForEach(1...7, id: \.self) { wd in
+                                DoseQuantityField(
+                                    title: DoseSummaryFormatter.shortWeekdays[wd - 1],
+                                    value: Binding(
+                                        get: { weekdayTargets[wd - 1] },
+                                        set: { weekdayTargets[wd - 1] = $0 }),
+                                    range: 0...20, step: 0.5)
+                            }
+                        } else {
+                            DoseQuantityField(title: "Doses per day", value: $dailyDoseTarget)
+                        }
                     }
                     TextField("General notes", text: $notes, axis: .vertical)
                 }
@@ -65,7 +86,7 @@ struct MedicationEditor: View {
                         routines: routines,
                         selected: $selected,
                         quantities: $quantities,
-                        target: dailyDoseTarget,
+                        target: resolvedDaily,
                         strengthValue: strengthValue,
                         strengthUnit: strengthUnit)
                     Section("Why started? (optional)") {
@@ -118,7 +139,8 @@ struct MedicationEditor: View {
             do {
                 try MedicationService.addMedication(
                     name: name, strengthValue: strengthValue, strengthUnit: strengthUnit, form: form,
-                    isPRN: isPRN, notes: notes, dailyDoseTarget: dailyDoseTarget, placements: placements,
+                    isPRN: isPRN, notes: notes, dailyDoseTarget: resolvedDaily,
+                    weekdayDoseTargets: resolvedWeekdayTargets, placements: placements,
                     reason: reason, in: context)
                 dismiss()
             } catch {

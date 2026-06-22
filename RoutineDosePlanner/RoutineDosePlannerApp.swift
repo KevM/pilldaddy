@@ -51,6 +51,7 @@ struct RoutineDosePlannerApp: App {
         }
 
         DoseLogMigration.backfillPRNFlag(in: container.mainContext)
+        WeekdayTargetMigration.backfill(in: container.mainContext)
 
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-seedTestData") {

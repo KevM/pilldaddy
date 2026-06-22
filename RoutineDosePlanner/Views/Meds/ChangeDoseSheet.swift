@@ -10,6 +10,8 @@ struct ChangeDoseSheet: View {
     @State private var strengthValue = 0.0
     @State private var strengthUnit = "mg"
     @State private var target = 1.0
+    @State private var variesByDay = false
+    @State private var weekdayTargets = Array(repeating: 1.0, count: 7)
     @State private var quantities: [PersistentIdentifier: Double] = [:]
     @Query(sort: [SortDescriptor(\Routine.timeOfDay), SortDescriptor(\Routine.uuid)])
     private var allRoutines: [Routine]
@@ -22,9 +24,20 @@ struct ChangeDoseSheet: View {
         !reason.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    private var resolvedWeekdayTargets: [Double]? {
+        variesByDay ? WeekdayDoseTargets.collapse(weekdayTargets).perWeekday : nil
+    }
+    private var resolvedDaily: Double {
+        variesByDay ? WeekdayDoseTargets.collapse(weekdayTargets).daily : target
+    }
     private var overAllocated: Bool {
-        let total = selected.reduce(0.0) { $0 + (quantities[$1] ?? 1.0) }
-        return DoseAllocation.isOverTarget(allocated: total, target: target)
+        let routinesByID = Dictionary(uniqueKeysWithValues: allRoutines.map { ($0.persistentModelID, $0) })
+        let placements: [(routine: Routine, quantity: Double)] = selected.compactMap { id in
+            guard let routine = routinesByID[id] else { return nil }
+            return (routine, quantities[id] ?? 1.0)
+        }
+        return DoseAllocation.placementsOverTarget(
+            daily: resolvedDaily, perWeekday: resolvedWeekdayTargets, placements: placements)
     }
 
     var body: some View {
@@ -32,7 +45,19 @@ struct ChangeDoseSheet: View {
             Form {
                 Section("New dose") {
                     StrengthInputField(value: $strengthValue, unit: $strengthUnit)
-                    DoseQuantityField(title: "Doses per day", value: $target)
+                    Toggle("Amount varies by day of week", isOn: $variesByDay)
+                    if variesByDay {
+                        ForEach(1...7, id: \.self) { wd in
+                            DoseQuantityField(
+                                title: DoseSummaryFormatter.shortWeekdays[wd - 1],
+                                value: Binding(
+                                    get: { weekdayTargets[wd - 1] },
+                                    set: { weekdayTargets[wd - 1] = $0 }),
+                                range: 0...20, step: 0.5)
+                        }
+                    } else {
+                        DoseQuantityField(title: "Doses per day", value: $target)
+                    }
                 }
                 if !medication.isPRN {
                     RoutineAllocationSection(
@@ -40,7 +65,7 @@ struct ChangeDoseSheet: View {
                         routines: allRoutines,
                         selected: $selected,
                         quantities: $quantities,
-                        target: target,
+                        target: resolvedDaily,
                         strengthValue: strengthValue,
                         strengthUnit: strengthUnit)
                 }
@@ -61,6 +86,9 @@ struct ChangeDoseSheet: View {
                 strengthValue = medication.strengthValue
                 strengthUnit = medication.strengthUnit
                 target = medication.dailyDoseTarget
+                variesByDay = medication.hasVariableSchedule
+                weekdayTargets = WeekdayDoseTargets.expand(
+                    daily: medication.dailyDoseTarget, perWeekday: medication.weekdayDoseTargets)
                 for item in medication.routineItems ?? [] {
                     guard let routine = item.routine else { continue }
                     let id = routine.persistentModelID
@@ -91,8 +119,8 @@ struct ChangeDoseSheet: View {
         do {
             try MedicationService.changeDose(
                 medication, newStrengthValue: strengthValue, newStrengthUnit: strengthUnit,
-                newDailyDoseTarget: target, placements: placements,
-                reason: reason, in: context)
+                newDailyDoseTarget: resolvedDaily, newWeekdayDoseTargets: resolvedWeekdayTargets,
+                placements: placements, reason: reason, in: context)
             dismiss()
         } catch {
             errorMessage = errorMessage(for: error)
