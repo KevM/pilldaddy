@@ -159,10 +159,10 @@ struct DayQueryTests {
     func testRoutineDayStateAndIsCompletedAllStatuses() throws {
         let blue = Routine(name: "Blue", timeOfDay: .now)
         context.insert(blue)
-        let medA = try MedicationService.addMedication(
+        _ = try MedicationService.addMedication(
             name: "A", strengthValue: 1, strengthUnit: "mg", form: "tablet", isPRN: false, notes: "",
             placements: [(routine: blue, quantity: 1.0)], reason: "", in: context)
-        let medB = try MedicationService.addMedication(
+        _ = try MedicationService.addMedication(
             name: "B", strengthValue: 1, strengthUnit: "mg", form: "tablet", isPRN: false, notes: "",
             placements: [(routine: blue, quantity: 1.0)], reason: "", in: context)
         let itemA = try #require((blue.items ?? []).first { $0.medication?.name == "A" })
