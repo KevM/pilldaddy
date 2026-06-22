@@ -21,4 +21,8 @@ struct DoseQuantityFieldTests {
     @Test func rejectsZero() {
         #expect(DoseQuantityParsing.value(from: "0") == nil)
     }
+
+    @Test func acceptsZeroIfAllowed() {
+        #expect(DoseQuantityParsing.value(from: "0", allowZero: true) == 0.0)
+    }
 }

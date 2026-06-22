@@ -45,8 +45,16 @@ struct RoutineAllocationSection: View {
             Toggle(isOn: Binding(
                 get: { isOn },
                 set: { on in
-                    if on { selected.insert(id); quantities[id] = quantities[id] ?? 1.0 }
-                    else { selected.remove(id) }
+                    if on {
+                        selected.insert(id)
+                        if let q = quantities[id], q > 0 {
+                            // Keep existing positive quantity
+                        } else {
+                            quantities[id] = 1.0
+                        }
+                    } else {
+                        selected.remove(id)
+                    }
                 })) {
                 HStack {
                     Circle().fill(Color(hex: routine.colorHex)).frame(width: 12, height: 12)
@@ -59,9 +67,16 @@ struct RoutineAllocationSection: View {
             if isOn {
                 DoseQuantityField(
                     title: "Quantity",
-                    value: Binding(get: { quantities[id] ?? 1.0 },
-                                   set: { quantities[id] = $0 }),
-                    range: 0.5...20, step: 0.5)
+                    value: Binding(
+                        get: { quantities[id] ?? 1.0 },
+                        set: { newValue in
+                            if newValue <= 0 {
+                                selected.remove(id)
+                            } else {
+                                quantities[id] = newValue
+                            }
+                        }),
+                    range: 0...20, step: 0.5)
             }
         }
     }

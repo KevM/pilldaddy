@@ -2,9 +2,14 @@ import SwiftUI
 
 /// Pure parsing for manual dose entry: a positive decimal or nil.
 enum DoseQuantityParsing {
-    static func value(from text: String) -> Double? {
+    static func value(from text: String, allowZero: Bool = false) -> Double? {
         let trimmed = text.trimmingCharacters(in: .whitespaces)
-        guard let v = Double(trimmed), v > 0 else { return nil }
+        guard let v = Double(trimmed) else { return nil }
+        if allowZero {
+            guard v >= 0 else { return nil }
+        } else {
+            guard v > 0 else { return nil }
+        }
         return v
     }
 }
@@ -37,7 +42,7 @@ struct DoseQuantityField: View {
                         .keyboardType(.decimalPad)
                         .multilineTextAlignment(.trailing)
                         .onChange(of: text) { _, new in
-                            if let v = DoseQuantityParsing.value(from: new) { value = v }
+                            if let v = DoseQuantityParsing.value(from: new, allowZero: range.lowerBound <= 0) { value = v }
                         }
                     Button { manual = false } label: {
                         Label("Steps", systemImage: "chevron.left")
