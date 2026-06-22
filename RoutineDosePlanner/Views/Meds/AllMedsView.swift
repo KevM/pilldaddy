@@ -56,8 +56,12 @@ struct AllMedsView: View {
             } else if med.isPRN {
                 tag("PRN")
             } else if DoseAllocation.needsAttention(med) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
+                HStack(spacing: 3) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                    Text(DoseAllocation.status(med) == .over ? "Over target" : "Under target")
+                        .font(.caption2)
+                }
+                .foregroundStyle(.orange)
             }
         }
     }
